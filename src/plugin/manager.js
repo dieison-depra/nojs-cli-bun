@@ -1,10 +1,18 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { searchRegistry } from './registry.js';
 
 const CONFIG_FILE = 'nojs.config.json';
 const CDN_BASE = 'https://cdn.no-js.dev/plugins';
+const NPM_NAME_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+
+function validatePackageName(name) {
+  if (!NPM_NAME_RE.test(name)) {
+    throw new Error(`Invalid package name: "${name}". Only lowercase alphanumeric, hyphens, dots, tildes, and scoped names are allowed.`);
+  }
+}
 
 /**
  * Search for plugins in the CDN registry and npm.
@@ -39,16 +47,16 @@ export async function install(name) {
   const isNpm = name.startsWith('npm:');
   const cleanName = isNpm ? name.slice(4) : name;
 
-  // Check if already installed
+  validatePackageName(cleanName);
+
   if (config.plugins?.some((p) => p.name === cleanName)) {
     console.log(`Plugin "${cleanName}" is already installed.`);
     return;
   }
 
   if (isNpm) {
-    // Install from npm
     console.log(`Installing ${cleanName} from npm...`);
-    execSync(`npm install ${cleanName}`, { stdio: 'inherit' });
+    execFileSync('npm', ['install', cleanName], { stdio: 'inherit' });
 
     config.plugins = config.plugins || [];
     config.plugins.push({
@@ -57,16 +65,17 @@ export async function install(name) {
       installed: new Date().toISOString().split('T')[0],
     });
   } else {
-    // Install from CDN
     const cdnUrl = `${CDN_BASE}/${cleanName}.js`;
     console.log(`Installing ${cleanName} from CDN...`);
-    console.log(`  URL: ${cdnUrl}`);
+
+    const integrity = await computeIntegrity(cdnUrl);
 
     config.plugins = config.plugins || [];
     config.plugins.push({
       name: cleanName,
       source: 'cdn',
       url: cdnUrl,
+      integrity,
       installed: new Date().toISOString().split('T')[0],
     });
   }
@@ -78,7 +87,8 @@ export async function install(name) {
   if (isNpm) {
     console.log(`  <script src="node_modules/${cleanName}/dist/index.js"><\/script>`);
   } else {
-    console.log(`  <script src="${CDN_BASE}/${cleanName}.js"><\/script>`);
+    const plugin = config.plugins.find((p) => p.name === cleanName);
+    console.log(`  <script src="${CDN_BASE}/${cleanName}.js" integrity="${plugin.integrity}" crossorigin="anonymous"><\/script>`);
   }
 }
 
@@ -88,6 +98,9 @@ export async function install(name) {
 export async function update(name) {
   const config = await loadProjectConfig();
   const cleanName = name.startsWith('npm:') ? name.slice(4) : name;
+
+  validatePackageName(cleanName);
+
   const plugin = config.plugins?.find((p) => p.name === cleanName);
 
   if (!plugin) {
@@ -97,9 +110,12 @@ export async function update(name) {
 
   if (plugin.source === 'npm') {
     console.log(`Updating ${cleanName} from npm...`);
-    execSync(`npm update ${cleanName}`, { stdio: 'inherit' });
+    execFileSync('npm', ['update', cleanName], { stdio: 'inherit' });
   } else {
-    console.log(`CDN plugins are always up-to-date (served from ${CDN_BASE}/${cleanName}.js).`);
+    const cdnUrl = `${CDN_BASE}/${cleanName}.js`;
+    const integrity = await computeIntegrity(cdnUrl);
+    plugin.integrity = integrity;
+    console.log(`CDN plugin integrity updated.`);
   }
 
   plugin.updated = new Date().toISOString().split('T')[0];
@@ -113,6 +129,9 @@ export async function update(name) {
 export async function remove(name) {
   const config = await loadProjectConfig();
   const cleanName = name.startsWith('npm:') ? name.slice(4) : name;
+
+  validatePackageName(cleanName);
+
   const idx = config.plugins?.findIndex((p) => p.name === cleanName);
 
   if (idx === undefined || idx === -1) {
@@ -124,7 +143,7 @@ export async function remove(name) {
 
   if (plugin.source === 'npm') {
     console.log(`Removing ${cleanName} from npm...`);
-    execSync(`npm uninstall ${cleanName}`, { stdio: 'inherit' });
+    execFileSync('npm', ['uninstall', cleanName], { stdio: 'inherit' });
   }
 
   config.plugins.splice(idx, 1);
@@ -152,6 +171,14 @@ export async function list() {
     if (plugin.url) console.log(`    ${plugin.url}`);
     console.log('');
   }
+}
+
+async function computeIntegrity(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch plugin from ${url}: HTTP ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  const hash = createHash('sha384').update(Buffer.from(buffer)).digest('base64');
+  return `sha384-${hash}`;
 }
 
 async function loadProjectConfig() {

@@ -11,6 +11,7 @@ Options:
   --root <dir>        Root directory to serve (default: current directory)
   --no-reload         Disable live reload
   --open              Open browser on start
+  --quiet, -q         Suppress request logging
   -h, --help          Show this help
 
 Features:
@@ -33,6 +34,7 @@ export async function run(argv) {
     root: args.root,
     liveReload: args.liveReload,
     open: args.open,
+    quiet: args.quiet,
   });
 
   const shutdown = () => {
@@ -46,7 +48,7 @@ export async function run(argv) {
 }
 
 function parseArgs(argv) {
-  const args = { port: 3000, root: '.', liveReload: true, open: false };
+  const args = { port: 3000, root: '.', liveReload: true, open: false, quiet: false };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -55,6 +57,7 @@ function parseArgs(argv) {
       case '--root': args.root = argv[++i]; break;
       case '--no-reload': args.liveReload = false; break;
       case '--open': args.open = true; break;
+      case '--quiet': case '-q': args.quiet = true; break;
       default: throw new Error(`Unknown option: ${arg}. Run "nojs dev --help" for usage.`);
     }
   }

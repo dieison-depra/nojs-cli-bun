@@ -7,11 +7,13 @@ const CONFIG_FILES = [
   'nojs-prebuild.config.mjs',
 ];
 
-const DEFAULTS = {
+const DEFAULTS = Object.freeze({
   input: '**/*.html',
   output: null,
   plugins: {},
-};
+});
+
+const POISONED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /**
  * Load configuration from a config file or return defaults.
@@ -22,9 +24,13 @@ const DEFAULTS = {
  */
 export async function loadConfig(configPath, cwd = process.cwd()) {
   let userConfig = {};
+  const resolvedCwd = resolve(cwd);
 
   if (configPath) {
     const abs = resolve(cwd, configPath);
+    if (!abs.startsWith(resolvedCwd + '/') && abs !== resolvedCwd) {
+      throw new Error(`Config file must be within the project directory: ${configPath}`);
+    }
     userConfig = await importConfig(abs);
   } else {
     for (const name of CONFIG_FILES) {
@@ -36,7 +42,17 @@ export async function loadConfig(configPath, cwd = process.cwd()) {
     }
   }
 
-  return { ...DEFAULTS, ...userConfig };
+  return { ...DEFAULTS, ...sanitizeConfig(userConfig) };
+}
+
+function sanitizeConfig(obj) {
+  if (obj == null || typeof obj !== 'object') return {};
+  const clean = {};
+  for (const key of Object.keys(obj)) {
+    if (POISONED_KEYS.has(key)) continue;
+    clean[key] = obj[key];
+  }
+  return clean;
 }
 
 async function importConfig(absPath) {

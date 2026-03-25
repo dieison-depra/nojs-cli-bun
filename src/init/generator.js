@@ -2,6 +2,16 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const CDN_URL = 'https://cdn.no-js.dev/';
+const LOCALE_RE = /^[a-z]{2}(-[A-Z]{2})?$/;
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 /**
  * Generate a No.JS project based on wizard answers.
@@ -17,7 +27,7 @@ const CDN_URL = 'https://cdn.no-js.dev/';
  * @returns {Promise<{ files: string[] }>}
  */
 export async function generate(answers, cwd = process.cwd()) {
-  const root = join(cwd, answers.name);
+  const root = cwd;
   const files = [];
 
   await mkdir(root, { recursive: true });
@@ -31,15 +41,21 @@ export async function generate(answers, cwd = process.cwd()) {
   if (answers.routing) {
     await mkdir(join(root, 'pages'), { recursive: true });
 
-    await writeFile(join(root, 'pages', 'home.html'), buildPage('home', answers), 'utf-8');
-    files.push('pages/home.html');
+    await writeFile(join(root, 'pages', 'home.tpl'), buildPage('home', answers), 'utf-8');
+    files.push('pages/home.tpl');
 
-    await writeFile(join(root, 'pages', 'about.html'), buildPage('about', answers), 'utf-8');
-    files.push('pages/about.html');
+    await writeFile(join(root, 'pages', 'about.tpl'), buildPage('about', answers), 'utf-8');
+    files.push('pages/about.tpl');
   }
 
   // i18n locale files
   if (answers.i18n && answers.locales) {
+    for (const locale of answers.locales) {
+      if (!LOCALE_RE.test(locale)) {
+        throw new Error(`Invalid locale: "${locale}". Expected format: "en" or "en-US".`);
+      }
+    }
+
     await mkdir(join(root, 'locales'), { recursive: true });
 
     for (const locale of answers.locales) {
@@ -75,14 +91,14 @@ function buildIndex(answers) {
   parts.push('<head>');
   parts.push('  <meta charset="UTF-8">');
   parts.push('  <meta name="viewport" content="width=device-width, initial-scale=1.0">');
-  parts.push(`  <title>${answers.name}</title>`);
+  parts.push(`  <title>${escapeHtml(answers.name)}</title>`);
   parts.push('  <link rel="stylesheet" href="assets/style.css">');
   parts.push(`  <script src="${CDN_URL}"><\/script>`);
   parts.push('</head>');
 
   // Body attributes
   const bodyAttrs = [];
-  if (answers.apiUrl) bodyAttrs.push(`base="${answers.apiUrl}"`);
+  if (answers.apiUrl) bodyAttrs.push(`base="${escapeHtml(answers.apiUrl)}"`);
   if (answers.i18n) bodyAttrs.push(`store="app" state="{ locale: '${answers.defaultLocale || 'en'}' }"`);
 
   parts.push(`<body${bodyAttrs.length ? ' ' + bodyAttrs.join(' ') : ''}>`);
@@ -119,10 +135,7 @@ function buildIndex(answers) {
 
   // Main content
   if (answers.routing) {
-    parts.push('  <template route="/" src="pages/home.html"></template>');
-    parts.push('  <template route="/about" src="pages/about.html"></template>');
-    parts.push('');
-    parts.push('  <main route-view></main>');
+    parts.push('  <main route-view src="pages/" route-index="home"></main>');
   } else {
     // No routing — inline content
     parts.push('  <main>');

@@ -1,19 +1,32 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
+import { basename, resolve } from 'node:path';
 import { generate } from '../init/generator.js';
 
 const HELP = `
-nojs init — Scaffold a new No.JS project
+nojs init (i) — Scaffold a new No.JS project
 
 Usage:
-  nojs init [options]
+  nojs init [path] [options]
+
+Arguments:
+  path                        Target directory (default: ".")
 
 Options:
-  --name <name>     Project name (skips prompt)
-  --yes             Accept all defaults
-  -h, --help        Show this help
+  --name <name>               Project name (default: directory name)
+  --routing, -r               Enable SPA routing (y/n)
+  --i18n                      Enable i18n (y/n)
+  --locales <list>            Comma-separated locales (e.g., "en,pt")
+  --default-locale <locale>   Default locale
+  --api <url>                 Base API URL
+  --yes, -y                   Accept all defaults (skip wizard)
+  -h, --help                  Show this help
 
-The wizard asks what features you need and generates a tailored project.
+Examples:
+  nojs init
+  nojs i ./kanban
+  nojs i --routing y --i18n y --locales en,pt --default-locale pt
+  nojs i ./my-app -y
 `;
 
 export async function run(argv) {
@@ -22,70 +35,91 @@ export async function run(argv) {
     return;
   }
 
-  const defaults = argv.includes('--yes');
-  const nameFlag = flagValue(argv, '--name');
+  const flags = parseFlags(argv);
+  const targetDir = flags.path ? resolve(process.cwd(), flags.path) : process.cwd();
+  const skipWizard = flags.yes || allAnswered(flags);
 
-  const rl = createInterface({ input: stdin, output: stdout });
+  const rl = skipWizard ? null : createInterface({ input: stdin, output: stdout });
 
   try {
     const answers = {};
+    const dirName = basename(targetDir);
 
-    // Project name
-    answers.name = nameFlag || await ask(rl, 'Project name:', 'my-nojs-app', defaults);
-
-    // SPA routing
-    answers.routing = await confirm(rl, 'Use SPA routing?', true, defaults);
-
-    // i18n
-    answers.i18n = await confirm(rl, 'Use i18n (internationalization)?', false, defaults);
+    answers.name = flags.name || (skipWizard ? dirName : await ask(rl, 'Project name:', dirName));
+    answers.routing = flags.routing ?? (skipWizard ? true : await confirm(rl, 'Use SPA routing?', true));
+    answers.i18n = flags.i18n ?? (skipWizard ? false : await confirm(rl, 'Use i18n (internationalization)?', false));
 
     if (answers.i18n) {
-      const localesStr = await ask(rl, 'Locales (comma-separated):', 'en, pt', defaults);
+      const localesStr = flags.locales || (skipWizard ? 'en, pt' : await ask(rl, 'Locales (comma-separated):', 'en, pt'));
       answers.locales = localesStr.split(',').map((l) => l.trim()).filter(Boolean);
-      answers.defaultLocale = await ask(rl, 'Default locale:', answers.locales[0], defaults);
+      answers.defaultLocale = flags.defaultLocale || (skipWizard ? answers.locales[0] : await ask(rl, 'Default locale:', answers.locales[0]));
     }
 
-    // Base API URL
-    const apiUrl = await ask(rl, 'Base API URL (leave empty for none):', '', defaults);
+    const apiUrl = flags.api ?? (skipWizard ? '' : await ask(rl, 'Base API URL (leave empty for none):', ''));
     answers.apiUrl = apiUrl || null;
 
     console.log('');
     console.log(`Creating project "${answers.name}"...`);
 
-    const result = await generate(answers);
+    const result = await generate(answers, targetDir);
 
     console.log('');
-    console.log(`Project created at ./${answers.name}/`);
+    console.log(`Project created at ${flags.path || '.'}`);
     console.log('');
     console.log('  Files:');
     result.files.forEach((f) => console.log(`    ${f}`));
     console.log('');
     console.log('  Next steps:');
-    console.log(`    cd ${answers.name}`);
+    if (flags.path) console.log(`    cd ${flags.path}`);
     console.log('    nojs dev');
     console.log('');
   } finally {
-    rl.close();
+    rl?.close();
   }
 }
 
-async function ask(rl, question, defaultValue, useDefaults) {
-  if (useDefaults && defaultValue !== undefined) return defaultValue;
+function parseFlags(argv) {
+  const flags = { path: null, name: null, routing: null, i18n: null, locales: null, defaultLocale: null, api: null, yes: false };
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    switch (arg) {
+      case '--name': flags.name = argv[++i]; break;
+      case '--routing': case '-r': flags.routing = toBool(argv[++i]); break;
+      case '--i18n': flags.i18n = toBool(argv[++i]); break;
+      case '--locales': flags.locales = argv[++i]; break;
+      case '--default-locale': flags.defaultLocale = argv[++i]; break;
+      case '--api': flags.api = argv[++i]; break;
+      case '--yes': case '-y': flags.yes = true; break;
+      default:
+        if (!arg.startsWith('-') && !flags.path) flags.path = arg;
+        break;
+    }
+  }
+
+  return flags;
+}
+
+function toBool(value) {
+  if (!value) return null;
+  const v = value.toLowerCase();
+  return v === 'y' || v === 'yes' || v === 's' || v === 'sim' || v === 'true' || v === '1';
+}
+
+function allAnswered(flags) {
+  return flags.routing !== null && flags.i18n !== null;
+}
+
+async function ask(rl, question, defaultValue) {
   const suffix = defaultValue ? ` (${defaultValue})` : '';
   const answer = await rl.question(`  ${question}${suffix} `);
   return answer.trim() || defaultValue || '';
 }
 
-async function confirm(rl, question, defaultValue, useDefaults) {
-  if (useDefaults) return defaultValue;
+async function confirm(rl, question, defaultValue) {
   const hint = defaultValue ? '(Y/n)' : '(y/N)';
   const answer = await rl.question(`  ${question} ${hint} `);
   const trimmed = answer.trim().toLowerCase();
   if (!trimmed) return defaultValue;
   return trimmed === 'y' || trimmed === 'yes' || trimmed === 's' || trimmed === 'sim';
-}
-
-function flagValue(argv, flag) {
-  const idx = argv.indexOf(flag);
-  return idx !== -1 && idx + 1 < argv.length ? argv[idx + 1] : null;
 }
