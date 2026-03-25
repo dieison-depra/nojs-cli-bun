@@ -6,9 +6,11 @@ nojs dev — Start a local dev server with live reload
 Usage:
   nojs dev [options]
 
+Arguments:
+  path                Root directory to serve (default: current directory)
+
 Options:
   --port <port>       Port number (default: 3000)
-  --root <dir>        Root directory to serve (default: current directory)
   --no-reload         Disable live reload
   --open              Open browser on start
   --quiet, -q         Suppress request logging
@@ -54,11 +56,12 @@ function parseArgs(argv) {
     const arg = argv[i];
     switch (arg) {
       case '--port': args.port = parseInt(argv[++i], 10); break;
-      case '--root': args.root = argv[++i]; break;
       case '--no-reload': args.liveReload = false; break;
       case '--open': args.open = true; break;
       case '--quiet': case '-q': args.quiet = true; break;
-      default: throw new Error(`Unknown option: ${arg}. Run "nojs dev --help" for usage.`);
+      default:
+        if (!arg.startsWith('-')) args.root = arg;
+        else throw new Error(`Unknown option: ${arg}. Run "nojs dev --help" for usage.`);
     }
   }
 
