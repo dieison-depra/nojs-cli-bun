@@ -1,0 +1,8 @@
+__tests__/
+coverage/
+.github/
+.vscode/
+.idea/
+*.test.js
+jest.config.js
+.DS_Store
