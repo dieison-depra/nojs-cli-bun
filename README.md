@@ -1,8 +1,8 @@
 # NoJS CLI
 
-Official command-line interface for the **[No.JS](https://github.com/ErickXavier/no-js)** framework — the HTML-first reactive framework that lets you build dynamic web applications using only HTML attributes, with zero JavaScript written by you.
+**Official CLI for the [No.JS](https://github.com/ErickXavier/no-js) framework**
 
-## What is NoJS CLI?
+Scaffold projects, optimize HTML for production, run a dev server with live reload, validate templates, and manage plugins — all from the command line.
 
 The CLI is the companion toolchain for No.JS projects. It provides everything you need to go from a blank folder to a production-ready application:
 
@@ -12,45 +12,92 @@ The CLI is the companion toolchain for No.JS projects. It provides everything yo
 - **Validate** your templates for common No.JS mistakes before shipping (`validate`)
 - **Manage** community and official plugins (`plugin`)
 
-## Installation
+---
+
+## Install
 
 ```bash
 npm install -g @erickxavier/nojs-cli
 ```
 
-Requires **Node.js ≥ 18**.
+Requires **Node.js >= 18**.
+
+---
 
 ## Quick Start
 
 ```bash
-# 1. Scaffold a new project
+# Create a new project
 nojs init my-app
-
-# 2. Enter the project folder
 cd my-app
 
-# 3. Start the dev server
+# Start the dev server
 nojs dev
 
-# 4. (Before deploying) optimize the HTML output
+# Validate your templates
+nojs validate *.html
+
+# Optimize for production
 nojs prebuild
 ```
+
+---
 
 ## Commands
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `nojs init [dir]` | `i` | Interactive wizard to scaffold a new No.JS project |
-| `nojs prebuild` | `b` | Run build-time optimization plugins on HTML files |
-| `nojs dev [dir]` | `d` | Start a local dev server with live reload |
-| `nojs validate [dir]` | `v` | Validate No.JS templates for common mistakes |
-| `nojs plugin <sub>` | `p` | Manage plugins (search, install, update, remove) |
+| `nojs init [path]` | `i` | Scaffold a new No.JS project with optional routing, i18n, and API base |
+| `nojs prebuild [dir]` | `b` | Build-time HTML optimization — 26 plugins for performance, SEO, security, and accessibility |
+| `nojs dev [path]` | `d` | Local dev server with live reload (SSE), SPA fallback, colored request logging |
+| `nojs validate [files]` | `v` | Validate No.JS templates against 10 rules (CI-friendly JSON output) |
+| `nojs plugin <action>` | `p` | Manage plugins — `search`, `install`, `update`, `remove`, `list` |
+| `nojs help` | | Show help |
+| `nojs version` | | Show version |
 
-Run `nojs <command> --help` for detailed options on each command.
+---
 
-## Prebuild Plugins
+## Init
 
-The `prebuild` command ships with **26 built-in plugins** that apply build-time transformations to your HTML files. Plugins are opt-in — enable only what you need in `nojs-prebuild.config.js`.
+Interactive wizard that generates a ready-to-go No.JS project:
+
+```bash
+nojs init ./my-app
+```
+
+Non-interactive mode:
+
+```bash
+nojs init ./my-app --routing --i18n --locales en,pt --api https://api.example.com --yes
+```
+
+Generates `index.html`, route pages (`.tpl`), i18n locale files, and a `nojs.config.json`.
+
+---
+
+## Dev Server
+
+```bash
+nojs dev              # serve current directory
+nojs dev ./docs/      # serve a specific path
+nojs dev --port 8080  # custom port
+nojs dev --open       # open browser on start
+nojs dev --quiet      # suppress request logging
+nojs dev --no-reload  # disable live reload
+```
+
+Features: live reload via SSE, SPA fallback (serves `index.html` for unmatched routes), MIME type detection, path traversal protection.
+
+---
+
+## Prebuild
+
+The `prebuild` command runs a configurable pipeline of **26 built-in plugins** that apply build-time transformations to your HTML files. Plugins are opt-in — enable only what you need in `nojs-prebuild.config.js`.
+
+```bash
+nojs prebuild            # process current directory
+nojs prebuild ./dist/    # process a specific path
+```
 
 ### Performance
 | Plugin | What it does |
@@ -98,6 +145,8 @@ The `prebuild` command ships with **26 built-in plugins** that apply build-time 
 | `purge-unused-css` | Remove CSS rules with no matching selectors in the HTML |
 | `generate-pwa-manifest` | `manifest.webmanifest` + manifest link tag |
 
+---
+
 ## Configuration
 
 Create `nojs-prebuild.config.js` in your project root:
@@ -118,9 +167,38 @@ export default {
 };
 ```
 
+---
+
+## Validate
+
+```bash
+nojs validate *.html
+nojs validate src/ --format json   # JSON output for CI
+```
+
+Rules: missing `as` on fetch, `each` without `in`, `foreach` without `from`, `model` on non-form elements, `bind-html` warning, routes without `route-view`, empty event handlers, loops without `key`, duplicate store names, `validate` outside `<form>`.
+
+---
+
+## Plugin Manager
+
+Hybrid plugin manager — CDN for official plugins, npm for community packages:
+
+```bash
+nojs plugin search analytics
+nojs plugin install @nojs/analytics
+nojs plugin list
+nojs plugin update @nojs/analytics
+nojs plugin remove @nojs/analytics
+```
+
+CDN plugins get SRI integrity hashes (sha384) computed automatically.
+
+---
+
 ## Writing Your Own Plugin
 
-Plugins are plain ES modules. Drop a file into your project and point to it from your config:
+Plugins are plain ES modules:
 
 ```js
 // my-plugin.js
@@ -140,6 +218,8 @@ export default {
 
 See [docs/prebuild/creating-plugins.md](docs/prebuild/creating-plugins.md) for the full plugin development guide.
 
+---
+
 ## Documentation
 
 | Guide | Description |
@@ -149,6 +229,8 @@ See [docs/prebuild/creating-plugins.md](docs/prebuild/creating-plugins.md) for t
 | [Prebuild Plugins](docs/prebuild/plugins.md) | Full reference for all 26 built-in plugins |
 | [Creating Plugins](docs/prebuild/creating-plugins.md) | How to write and distribute custom plugins |
 | [Configuration](docs/configuration.md) | Config file reference |
+
+---
 
 ## Architecture
 
@@ -166,15 +248,38 @@ src/
     config.js                   ← config loader
     html.js                     ← HTML file utilities
     plugins/                    ← 26 built-in plugins
+__tests__/                      ← Jest unit tests
 ```
 
 **Zero production dependencies** (except `linkedom` for HTML parsing). Everything else uses Node.js built-ins.
 
-## Requirements
+---
 
-- **Node.js** ≥ 18
-- **No.JS** project (HTML files using No.JS directives)
+## Ecosystem
+
+| Tool | Description |
+|------|-------------|
+| [No.JS](https://github.com/ErickXavier/no-js) | The HTML-first reactive framework |
+| [NoJS-LSP](https://github.com/ErickXavier/nojs-lsp) | VS Code extension — autocomplete, hover docs, diagnostics |
+| [NoJS-MCP](https://github.com/ErickXavier/nojs-mcp) | MCP server — AI tools for building No.JS apps |
+| **NoJS-CLI** | This package |
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a PR.
+
+- [Changelog](CHANGELOG.md)
+- [Security Policy](SECURITY.md)
 
 ## License
 
-MIT © Erick Xavier
+[MIT](LICENSE) © Erick Xavier
+
+---
+
+<p align="center">
+  <strong>NoJS CLI</strong> — The command-line companion for No.JS<br>
+  <code>MIT License</code>
+</p>
