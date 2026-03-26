@@ -1,4 +1,4 @@
 /** @type {import('knip').KnipConfig} */
 export default {
-  ignoreDependencies: ['bun-types'],
+  ignoreDependencies: ['bun-types', 'sharp', 'beasties'],
 };
