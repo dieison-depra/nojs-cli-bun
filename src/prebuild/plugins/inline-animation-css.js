@@ -77,6 +77,17 @@ export default {
 			}
 		}
 
+		for (const tpl of doc.querySelectorAll('template')) {
+			const content = tpl.outerHTML;
+			for (const attr of ANIM_ATTRS) {
+				const re = new RegExp(`${attr}="([^"]+)"`, 'g');
+				let m;
+				while ((m = re.exec(content)) !== null) {
+					names.add(m[1].trim());
+				}
+			}
+		}
+
 		if (names.size === 0) return html;
 
 		const rules = [];

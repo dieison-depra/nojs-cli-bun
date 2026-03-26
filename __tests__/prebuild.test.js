@@ -1854,3 +1854,291 @@ describe("inline-svg", () => {
 		expect(html).not.toMatch(/height="24"/);
 	});
 });
+
+describe("inject-head-attrs — body directives and isSpaDefault", () => {
+	it("body page-title static literal → injects <title>", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><div hidden page-title="\'About Us\'"></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<title>About Us</title>");
+	});
+
+	it("body page-title dynamic expr → skipped", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><div hidden page-title="product.name"></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).not.toContain("<title>");
+	});
+
+	it("body page-description static → injects <meta name=\"description\">", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><div hidden page-description="\'Great site\'"></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('name="description"');
+		expect(html).toContain('content="Great site"');
+	});
+
+	it("body page-canonical static → injects <link rel=\"canonical\">", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><div hidden page-canonical="\'/about\'"></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('rel="canonical"');
+		expect(html).toContain('href="/about"');
+	});
+
+	it("body page-jsonld → injects <script type=\"application/ld+json\" data-nojs>", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><script type="application/json" hidden page-jsonld>{"@type":"WebPage"}</script></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('type="application/ld+json"');
+		expect(html).toContain("data-nojs");
+		expect(html).toContain('"@type":"WebPage"');
+	});
+
+	it("body directive takes precedence over route template attr", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<div hidden page-title="\'Body Title\'"></div>',
+				'<template route="/" page-title="\'Template Title\'"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<title>Body Title</title>");
+		expect(html).not.toContain("<title>Template Title</title>");
+	});
+
+	it("single non-root route template → isSpaDefault applies, attrs injected (isOnlyTemplate path)", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><template route="/about" page-title="\'About\'"></template></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<title>About</title>");
+	});
+
+	it("multiple route templates → only default route / is applied", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/" page-title="\'Home\'"></template>',
+				'<template route="/about" page-title="\'About\'"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<title>Home</title>");
+		expect(html).not.toContain("<title>About</title>");
+	});
+});
+
+describe("inline-animation-css — template scan", () => {
+	it("animation inside <template route> is detected and keyframe injected", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/about"><div animate="zoomIn">Content</div></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({ cwd: testDir, plugins: { "inline-animation-css": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("data-nojs-animations");
+		expect(html).toContain("@keyframes zoomIn");
+	});
+});
+
+describe("optimize-images — extended guards", () => {
+	it("image inside <template> is not lazy-loaded and no preload injected", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/"><img src="/inside.jpg" alt="inside"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).not.toContain('loading="lazy"');
+		expect(html).not.toContain('rel="preload"');
+	});
+
+	it("LCP with bind-src → preload skipped", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><img bind-src="product.image" alt="product"></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).not.toContain('rel="preload"');
+	});
+
+	it("src with {interpolation} → no preload", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><img src="/images/{id}.jpg" alt="dynamic"></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).not.toContain('rel="preload"');
+	});
+
+	it("image with class hero → promoted as LCP", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<img src="/thumb.jpg" alt="thumb">',
+				'<img src="/hero.jpg" alt="hero" class="hero">',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('href="/hero.jpg"');
+		expect(html).toContain('rel="preload"');
+	});
+
+	it("LCP with loading=lazy → attribute removed", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><img src="/hero.jpg" loading="lazy" alt="hero"></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).not.toContain('loading="lazy"');
+	});
+
+	it("preload is first child in <head>", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head><meta charset=\"UTF-8\"></head><body>",
+				'<img src="/hero.jpg" alt="hero">',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		const html = await readTestHtml("index.html");
+		const preloadIdx = html.indexOf('rel="preload"');
+		const charsetIdx = html.indexOf('charset="UTF-8"');
+		expect(preloadIdx).toBeGreaterThan(-1);
+		expect(preloadIdx).toBeLessThan(charsetIdx);
+	});
+
+	it("image missing alt → warning logged", async () => {
+		const warned = [];
+		const orig = console.warn;
+		console.warn = (...args) => warned.push(args.join(" "));
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><img src="/no-alt.jpg"></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
+		console.warn = orig;
+		expect(warned.some(w => w.includes("missing alt"))).toBe(true);
+	});
+});
+
+describe("generate-sitemap — extended exclusions and sorting", () => {
+	it("route with {slug} → excluded from sitemap", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/"></template>',
+				'<template route="/posts/{slug}"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-sitemap": { baseUrl: "https://example.com" } },
+		});
+		const xml = await readFile(join(testDir, "sitemap.xml"), "utf-8");
+		expect(xml).not.toContain("{slug}");
+		expect(xml).toContain("https://example.com/");
+	});
+
+	it("route with wildcard * → excluded from sitemap", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/"></template>',
+				'<template route="/products/*"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-sitemap": { baseUrl: "https://example.com" } },
+		});
+		const xml = await readFile(join(testDir, "sitemap.xml"), "utf-8");
+		expect(xml).not.toContain("/products/");
+	});
+
+	it("route with guard= attr → excluded from sitemap", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/"></template>',
+				'<template route="/admin" guard="isAdmin"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-sitemap": { baseUrl: "https://example.com" } },
+		});
+		const xml = await readFile(join(testDir, "sitemap.xml"), "utf-8");
+		expect(xml).not.toContain("/admin");
+	});
+
+	it("routes in sitemap are sorted alphabetically", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				'<template route="/zebra"></template>',
+				'<template route="/apple"></template>',
+				'<template route="/mango"></template>',
+				"</body></html>",
+			].join(""),
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-sitemap": { baseUrl: "https://example.com" } },
+		});
+		const xml = await readFile(join(testDir, "sitemap.xml"), "utf-8");
+		const appleIdx = xml.indexOf("/apple");
+		const mangoIdx = xml.indexOf("/mango");
+		const zebraIdx = xml.indexOf("/zebra");
+		expect(appleIdx).toBeLessThan(mangoIdx);
+		expect(mangoIdx).toBeLessThan(zebraIdx);
+	});
+});
