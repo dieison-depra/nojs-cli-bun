@@ -112,3 +112,35 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inject-view-transitions', () => {
+  it('injects @view-transition CSS into head', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-view-transitions': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('@view-transition { navigation: auto; }');
+  });
+
+  it('is idempotent — running twice does not duplicate the style tag', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-view-transitions': true } });
+    await prebuild({ cwd: testDir, plugins: { 'inject-view-transitions': true } });
+    const html = await readTestHtml('index.html');
+    const count = (html.match(/@view-transition/g) || []).length;
+    expect(count).toBe(1);
+  });
+
+  it('does nothing when config.enabled === false', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-view-transitions': { enabled: false } } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('@view-transition');
+  });
+
+  it('sets data-nojs-view-transitions attribute on the injected style tag', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-view-transitions': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('data-nojs-view-transitions');
+  });
+});
