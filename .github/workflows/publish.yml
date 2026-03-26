@@ -28,7 +28,7 @@ jobs:
 
       - name: Publish to npm
         run: |
-          printf '[install]\ntoken = "%s"\n' "$BUN_AUTH_TOKEN" >> bunfig.toml
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           bun publish --access public
         env:
-          BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
