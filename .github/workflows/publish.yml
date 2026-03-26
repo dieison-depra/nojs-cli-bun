@@ -27,6 +27,8 @@ jobs:
         run: bun test
 
       - name: Publish to npm
-        run: bun publish --access public
+        run: |
+          printf '[install]\ntoken = "%s"\n' "$BUN_AUTH_TOKEN" >> bunfig.toml
+          bun publish --access public
         env:
           BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
