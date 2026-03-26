@@ -8,10 +8,10 @@
   },
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --no-coverage",
-    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
-    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
-    "prepublishOnly": "npm test"
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "prepublishOnly": "bun test"
   },
   "keywords": [
     "nojs",
@@ -42,12 +42,10 @@
     "bin/"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "bun": ">=1.1.0"
   },
   "dependencies": {
     "linkedom": "^0.18.9"
   },
-  "devDependencies": {
-    "jest": "^30.2.0"
-  }
+  "devDependencies": {}
 }

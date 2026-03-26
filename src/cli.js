@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module';
+import pkg from '../package.json' with { type: 'json' };
 
 const COMMANDS = {
   init: () => import('./commands/init.js'),
@@ -47,8 +47,6 @@ export async function run(argv) {
   }
 
   if (raw === '-v' || raw === '--version' || raw === 'version') {
-    const require = createRequire(import.meta.url);
-    const pkg = require('../package.json');
     console.log(pkg.version);
     return;
   }

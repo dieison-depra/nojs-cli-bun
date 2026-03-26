@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { writeFile, mkdir, rm, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -761,7 +761,7 @@ describe('inject-sri-hashes', () => {
     await writeTestHtml('index.html', input);
     await expect(
       prebuild({ cwd: testDir, plugins: { 'inject-sri-hashes': { timeout: 500 } } }),
-    ).resolves.not.toThrow();
+    ).resolves.toBeDefined();
     const html = await readTestHtml('index.html');
     expect(html).not.toContain('integrity=');
   });
@@ -891,7 +891,7 @@ describe('inline-critical-css', () => {
     await writeTestHtml('index.html', '<html><head></head><body></body></html>');
     await expect(
       prebuild({ cwd: testDir, plugins: { 'inline-critical-css': true } })
-    ).resolves.not.toThrow();
+    ).resolves.toBeDefined();
   });
 
   it('plugin can be enabled without crashing', async () => {
@@ -961,7 +961,7 @@ describe('generate-responsive-images', () => {
     // sharp is not installed; runner must not throw and HTML must survive intact
     await expect(
       prebuild({ cwd: testDir, plugins: { 'generate-responsive-images': true } })
-    ).resolves.not.toThrow();
+    ).resolves.toBeDefined();
     const html = await readTestHtml('index.html');
     // HTML should still contain the original img tag (unchanged because sharp absent)
     expect(html).toContain('<img');
@@ -1101,7 +1101,7 @@ describe('audit-accessibility', () => {
       '<h1>Title</h1><h2>Subtitle</h2>' +
       '</body></html>';
     await writeTestHtml('index.html', compliantHtml);
-    await expect(prebuild({ cwd: testDir, plugins: { 'audit-accessibility': true } })).resolves.not.toThrow();
+    await expect(prebuild({ cwd: testDir, plugins: { 'audit-accessibility': true } })).resolves.toBeDefined();
   });
 
   it('throws when failOnError is true and <img> has no alt', async () => {
@@ -1115,7 +1115,7 @@ describe('audit-accessibility', () => {
     await writeTestHtml('index.html', '<html lang="en"><head></head><body><img src="/hero.jpg"></body></html>');
     await expect(
       prebuild({ cwd: testDir, plugins: { 'audit-accessibility': { failOnError: false } } })
-    ).resolves.not.toThrow();
+    ).resolves.toBeDefined();
   });
 
   it('returns HTML unchanged (audit only, no DOM mutation)', async () => {
@@ -1130,7 +1130,7 @@ describe('audit-accessibility', () => {
     await writeTestHtml('index.html', '<html lang="en"><head></head><body><img src="/deco.jpg" alt=""></body></html>');
     await expect(
       prebuild({ cwd: testDir, plugins: { 'audit-accessibility': { failOnError: true } } })
-    ).resolves.not.toThrow();
+    ).resolves.toBeDefined();
   });
 
   it('detects missing lang attribute on <html>', async () => {

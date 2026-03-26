@@ -1,7 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { searchRegistry } from './registry.js';
 
 const CONFIG_FILE = 'nojs.config.json';
@@ -56,7 +55,7 @@ export async function install(name) {
 
   if (isNpm) {
     console.log(`Installing ${cleanName} from npm...`);
-    execFileSync('npm', ['install', cleanName], { stdio: 'inherit' });
+    Bun.spawnSync(['npm', 'install', cleanName], { stdio: ['inherit', 'inherit', 'inherit'] });
 
     config.plugins = config.plugins || [];
     config.plugins.push({
@@ -110,7 +109,7 @@ export async function update(name) {
 
   if (plugin.source === 'npm') {
     console.log(`Updating ${cleanName} from npm...`);
-    execFileSync('npm', ['update', cleanName], { stdio: 'inherit' });
+    Bun.spawnSync(['npm', 'update', cleanName], { stdio: ['inherit', 'inherit', 'inherit'] });
   } else {
     const cdnUrl = `${CDN_BASE}/${cleanName}.js`;
     const integrity = await computeIntegrity(cdnUrl);
@@ -143,7 +142,7 @@ export async function remove(name) {
 
   if (plugin.source === 'npm') {
     console.log(`Removing ${cleanName} from npm...`);
-    execFileSync('npm', ['uninstall', cleanName], { stdio: 'inherit' });
+    Bun.spawnSync(['npm', 'uninstall', cleanName], { stdio: ['inherit', 'inherit', 'inherit'] });
   }
 
   config.plugins.splice(idx, 1);

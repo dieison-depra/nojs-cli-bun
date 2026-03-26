@@ -41,7 +41,7 @@ export async function run(argv) {
 
   const shutdown = () => {
     console.log('\nShutting down...');
-    server.close();
+    server.stop();
     process.exit(0);
   };
 

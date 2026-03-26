@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from 'bun:test';
 import { validateFiles } from '../src/validate/rules.js';
 
 describe('nojs validate', () => {
