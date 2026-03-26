@@ -112,3 +112,55 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('optimize-fonts', () => {
+  it('injects preconnect for fonts.googleapis.com when Google Fonts link is present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'optimize-fonts': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('href="https://fonts.googleapis.com"');
+    expect(html).toContain('rel="preconnect"');
+  });
+
+  it('injects preconnect for fonts.gstatic.com when Google Fonts link is present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'optimize-fonts': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('href="https://fonts.gstatic.com"');
+  });
+
+  it('adds display=swap to Google Fonts URL that does not have it', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'optimize-fonts': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('display=swap');
+  });
+
+  it('does not duplicate preconnects if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="preconnect" href="https://fonts.googleapis.com" crossorigin><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'optimize-fonts': true } });
+    const html = await readTestHtml('index.html');
+    const apiMatches = (html.match(/href="https:\/\/fonts\.googleapis\.com"/g) || []).length;
+    const staticMatches = (html.match(/href="https:\/\/fonts\.gstatic\.com"/g) || []).length;
+    expect(apiMatches).toBe(1);
+    expect(staticMatches).toBe(1);
+  });
+
+  it('does not modify pages with no Google Fonts', async () => {
+    const original = '<html><head><link rel="stylesheet" href="/styles.css"></head><body></body></html>';
+    await writeTestHtml('index.html', original);
+    await prebuild({ cwd: testDir, plugins: { 'optimize-fonts': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('fonts.googleapis.com');
+    expect(html).not.toContain('fonts.gstatic.com');
+    expect(html).not.toContain('display=swap');
+  });
+
+  it('does not duplicate display=swap if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'optimize-fonts': true } });
+    const html = await readTestHtml('index.html');
+    const swapMatches = (html.match(/display=swap/g) || []).length;
+    expect(swapMatches).toBe(1);
+  });
+});
