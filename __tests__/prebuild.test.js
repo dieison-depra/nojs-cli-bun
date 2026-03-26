@@ -112,3 +112,62 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('purge-unused-css', () => {
+  it('removes CSS class rules with no matching elements in HTML', async () => {
+    await writeTestHtml('index.html', '<html><head><style>.unused { color: red; } .used { color: blue; }</style></head><body><div class="used"></div></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('.unused');
+    expect(html).toContain('.used');
+  });
+
+  it('keeps CSS rules that have matching elements', async () => {
+    await writeTestHtml('index.html', '<html><head><style>.card { padding: 1rem; } p { margin: 0; }</style></head><body><div class="card"><p>Hello</p></div></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('.card');
+    expect(html).toContain('p {');
+  });
+
+  it('keeps @keyframes at-rules without purging', async () => {
+    await writeTestHtml('index.html', '<html><head><style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .unused { color: red; }</style></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('@keyframes spin');
+    expect(html).not.toContain('.unused');
+  });
+
+  it('keeps @media rules without purging', async () => {
+    await writeTestHtml('index.html', '<html><head><style>@media (max-width: 768px) { .sidebar { display: none; } } .gone { color: green; }</style></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('@media');
+    expect(html).toContain('.sidebar');
+    expect(html).not.toContain('.gone');
+  });
+
+  it('does not touch NoJS internal style tags', async () => {
+    const css = '.phantom { display: none; }';
+    await writeTestHtml('index.html', `<html><head><style data-nojs-animations>${css}</style></head><body></body></html>`);
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('.phantom');
+  });
+
+  it('handles multiple selectors: keeps rule if ANY selector matches', async () => {
+    await writeTestHtml('index.html', '<html><head><style>.missing, .present { font-size: 1rem; }</style></head><body><div class="present"></div></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('.missing, .present');
+  });
+
+  it('is a no-op when all CSS rules are used', async () => {
+    const original = '<html><head><style>h1 { color: black; } p { margin: 0; }</style></head><body><h1>Title</h1><p>Text</p></body></html>';
+    await writeTestHtml('index.html', original);
+    await prebuild({ cwd: testDir, plugins: { 'purge-unused-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('h1');
+    expect(html).toContain('p {');
+  });
+});
