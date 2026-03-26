@@ -112,3 +112,49 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inject-modulepreload', () => {
+  it('injects modulepreload for module scripts with src', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script type="module" src="/app.js"></script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-modulepreload': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('rel="modulepreload"');
+    expect(html).toContain('href="/app.js"');
+  });
+
+  it('skips non-module scripts', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script src="/app.js"></script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-modulepreload': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('rel="modulepreload"');
+  });
+
+  it('skips inline module scripts without src', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script type="module">console.log("hi");</script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-modulepreload': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('rel="modulepreload"');
+  });
+
+  it('skips cross-origin module scripts', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script type="module" src="https://cdn.example.com/app.js"></script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-modulepreload': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('rel="modulepreload"');
+  });
+
+  it('skips interpolated src values', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script type="module" src="/app.{hash}.js"></script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-modulepreload': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('rel="modulepreload"');
+  });
+
+  it('does not duplicate modulepreload if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="modulepreload" href="/app.js"></head><body><script type="module" src="/app.js"></script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-modulepreload': true } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/rel="modulepreload"/g) || [];
+    expect(matches.length).toBe(1);
+  });
+});
