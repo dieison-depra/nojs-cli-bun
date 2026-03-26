@@ -4,6 +4,7 @@ import injectSpeculationRules from './inject-speculation-rules.js';
 import injectOgTwitter from './inject-og-twitter.js';
 import generateSitemap from './generate-sitemap.js';
 import optimizeImages from './optimize-images.js';
+import inlineSvg from './inline-svg.js';
 
 export const builtinPlugins = {
   [injectResourceHints.name]: injectResourceHints,
@@ -12,4 +13,5 @@ export const builtinPlugins = {
   [injectOgTwitter.name]: injectOgTwitter,
   [generateSitemap.name]: generateSitemap,
   [optimizeImages.name]: optimizeImages,
+  [inlineSvg.name]: inlineSvg,
 };

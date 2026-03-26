@@ -112,3 +112,68 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inline-svg', () => {
+  it('inlines a small SVG file', async () => {
+    await writeFile(join(testDir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10"/></svg>');
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/icon.svg" alt="icon"></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<svg');
+    expect(html).not.toContain('<img');
+  });
+
+  it('does not inline SVG files larger than maxBytes', async () => {
+    const bigSvg = '<svg xmlns="http://www.w3.org/2000/svg">' + 'x'.repeat(5000) + '</svg>';
+    await writeFile(join(testDir, 'big.svg'), bigSvg);
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/big.svg"></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir, maxBytes: 100 } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<img');
+    expect(html).not.toContain('<svg');
+  });
+
+  it('does not inline external SVG URLs (https://)', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><img src="https://example.com/icon.svg"></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<img');
+    expect(html).not.toContain('<svg');
+  });
+
+  it('does not inline when data-no-inline is present', async () => {
+    await writeFile(join(testDir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>');
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/icon.svg" data-no-inline></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<img');
+    expect(html).not.toContain('<svg');
+  });
+
+  it('adds aria-hidden="true" when no alt attribute', async () => {
+    await writeFile(join(testDir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>');
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/icon.svg"></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it('adds aria-label and role="img" when alt is provided', async () => {
+    await writeFile(join(testDir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>');
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/icon.svg" alt="My Icon"></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('aria-label="My Icon"');
+    expect(html).toContain('role="img"');
+  });
+
+  it('strips width and height from the inlined SVG', async () => {
+    await writeFile(join(testDir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle r="10"/></svg>');
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/icon.svg"></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inline-svg': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<svg');
+    expect(html).not.toMatch(/width="24"/);
+    expect(html).not.toMatch(/height="24"/);
+  });
+});
