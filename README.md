@@ -1,8 +1,14 @@
-# NoJS CLI
+# NoJS CLI — Bun Edition
 
-**Official CLI for the [No.JS](https://github.com/ErickXavier/no-js) framework**
+**Bun-native CLI for the [No.JS](https://github.com/ErickXavier/no-js) framework**
 
 Scaffold projects, optimize HTML for production, run a dev server with live reload, validate templates, and manage plugins — all from the command line.
+
+> **This is a Bun fork of [ErickXavier/NoJS-CLI](https://github.com/ErickXavier/NoJS-CLI).**
+> The original project targets Node.js ≥ 18. This fork replaces the entire runtime with
+> [Bun](https://bun.sh) — the dev server uses `Bun.serve()`, the test suite runs on `bun:test`,
+> spawning uses `Bun.spawnSync`, and all tooling (`biome`, `knip`) is Bun-first.
+> This fork maintains its own feature roadmap and may periodically synchronise with upstream.
 
 The CLI is the companion toolchain for No.JS projects. It provides everything you need to go from a blank folder to a production-ready application:
 
@@ -17,10 +23,10 @@ The CLI is the companion toolchain for No.JS projects. It provides everything yo
 ## Install
 
 ```bash
-npm install -g @erickxavier/nojs-cli
+bun install -g @erickxavier/nojs-cli
 ```
 
-Requires **Node.js >= 18**.
+Requires **Bun >= 1.1**.
 
 ---
 
@@ -109,7 +115,7 @@ nojs prebuild ./dist/    # process a specific path
 | `inject-view-transitions` | `@view-transition` CSS for smooth same-origin navigation |
 | `inline-critical-css` | Inline above-fold CSS, async-load full sheet *(requires `beasties`)* |
 | `generate-responsive-images` | AVIF/WebP srcset generation *(requires `sharp`)* |
-| `precompress-assets` | `.br` and `.gz` companion files via Node zlib |
+| `precompress-assets` | `.br` and `.gz` companion files via Bun zlib |
 | `optimize-fonts` | Google Fonts preconnect + `font-display:swap` |
 | `minify-html` | Whitespace collapse and comment removal |
 | `inline-svg` | Replace `<img src="*.svg">` with inline `<svg>` |
@@ -229,6 +235,7 @@ See [docs/prebuild/creating-plugins.md](docs/prebuild/creating-plugins.md) for t
 | [Prebuild Plugins](docs/prebuild/plugins.md) | Full reference for all 26 built-in plugins |
 | [Creating Plugins](docs/prebuild/creating-plugins.md) | How to write and distribute custom plugins |
 | [Configuration](docs/configuration.md) | Config file reference |
+| [Dependency Analysis](docs/dependency-analysis.md) | Security risk and replaceability review |
 
 ---
 
@@ -248,10 +255,10 @@ src/
     config.js                   ← config loader
     html.js                     ← HTML file utilities
     plugins/                    ← 26 built-in plugins
-__tests__/                      ← Jest unit tests
+__tests__/                      ← bun:test unit tests
 ```
 
-**Zero production dependencies** (except `linkedom` for HTML parsing). Everything else uses Node.js built-ins.
+**Zero production dependencies** (except `linkedom` for HTML parsing). Everything else uses Bun built-ins.
 
 ---
 
@@ -280,6 +287,6 @@ Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md)
 ---
 
 <p align="center">
-  <strong>NoJS CLI</strong> — The command-line companion for No.JS<br>
-  <code>MIT License</code>
+  <strong>NoJS CLI — Bun Edition</strong> — The Bun-native command-line companion for No.JS<br>
+  Fork of <a href="https://github.com/ErickXavier/NoJS-CLI">ErickXavier/NoJS-CLI</a> · <code>MIT License</code>
 </p>

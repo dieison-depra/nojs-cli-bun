@@ -89,7 +89,7 @@ export default {
     'optimize-images': true,
     'optimize-fonts': true,
     'inline-svg': true,
-    'inline-critical-css': true,   // requires: npm install beasties
+    'inline-critical-css': true,   // requires: bun add beasties
     'purge-unused-css': true,
 
     // 6. HTML output
@@ -105,7 +105,7 @@ export default {
     'generate-pwa-manifest': { name: 'My App' },
     'precompress-assets': true,
 
-    // 9. Responsive images (requires: npm install sharp)
+    // 9. Responsive images (requires: bun add sharp)
     'generate-responsive-images': true,
 
     // 10. Audits

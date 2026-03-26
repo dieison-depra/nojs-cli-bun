@@ -49,9 +49,9 @@ Each feature lives on its own branch off the same base commit. All branches merg
 | `feat/t15-meta-audit` | `audit-meta-tags` | none | Check/inject title, description, charset, viewport, lang |
 | `feat/t18-canonical-url` | `inject-canonical-url` | none | Inject canonical link from siteUrl config + file path |
 | `feat/t16-third-party-scripts` | `enforce-script-loading` | none | Detect known third-party origins, add defer/async |
-| `feat/t10-csp-hashes` | `inject-csp-hashes` | none (Node crypto) | SHA-384 of all inline scripts + styles → CSP meta tag |
-| `feat/t4-sri-hashes` | `inject-sri-hashes` | none (Node crypto) | SHA-384 for external script/link tags with static URLs |
-| `feat/t7-precompress` | `precompress-assets` | none (Node zlib) | Generate .br + .gz companion files in finalize |
+| `feat/t10-csp-hashes` | `inject-csp-hashes` | none (Bun crypto) | SHA-384 of all inline scripts + styles → CSP meta tag |
+| `feat/t4-sri-hashes` | `inject-sri-hashes` | none (Bun crypto) | SHA-384 for external script/link tags with static URLs |
+| `feat/t7-precompress` | `precompress-assets` | none (Bun zlib) | Generate .br + .gz companion files in finalize |
 | `feat/t9-inject-jsonld` | `inject-jsonld` | none | WebPage/WebSite schema from page metadata |
 | `feat/t1-critical-css` | `inline-critical-css` | `beasties` | Extract + inline above-fold CSS, async-load full sheet |
 | `feat/t2-font-optimization` | `optimize-fonts` | none (manual) | Detect Google Fonts, inject preconnect + font-display:swap |

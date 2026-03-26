@@ -2,10 +2,10 @@
 
 ## Installation
 
-Install the CLI globally from npm:
+Install the CLI globally with Bun:
 
 ```bash
-npm install -g @erickxavier/nojs-cli
+bun install -g @erickxavier/nojs-cli
 ```
 
 Verify the installation:
@@ -14,7 +14,7 @@ Verify the installation:
 nojs --version
 ```
 
-**Requirements:** Node.js ≥ 18.
+**Requirements:** Bun ≥ 1.1.
 
 ## Scaffold a Project
 

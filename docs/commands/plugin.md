@@ -37,7 +37,7 @@ Prefix the package name with `npm:` to install from the npm registry using the l
 nojs plugin install npm:my-custom-nojs-plugin
 ```
 
-This runs `npm install <package>` in your project directory and registers the plugin in `nojs.config.json`.
+This runs `bun add <package>` in your project directory and registers the plugin in `nojs.config.json`.
 
 ## Plugin Registry (`nojs.config.json`)
 
@@ -63,7 +63,7 @@ The `integrity` field stores the SHA-384 hash of the plugin file for security ve
 
 - Package names are validated against a strict regex before any shell execution — only lowercase alphanumeric, hyphens, dots, tildes, and scoped names (`@scope/name`) are allowed.
 - CDN plugins have their SHA-384 hash verified before being written to disk.
-- Only `execFileSync` with an explicit arguments array is used (no shell string interpolation).
+- Only `Bun.spawnSync` with an explicit arguments array is used (no shell string interpolation).
 
 ## Example Session
 

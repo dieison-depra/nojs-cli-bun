@@ -115,7 +115,7 @@ async process(html) {
 
 ## Writing Files (finalize hook)
 
-Use Node built-ins only — no external dependencies:
+Use Bun built-ins only — no external dependencies (`node:fs` and `node:path` are fully supported by Bun):
 
 ```js
 import { writeFile, mkdir } from 'node:fs/promises';
@@ -137,7 +137,7 @@ async process(html) {
   try {
     ({ default: myLib } = await import('my-optional-dep'));
   } catch {
-    process.stderr.write('[my-plugin] warn: my-optional-dep not installed. Run: npm install my-optional-dep\n');
+    process.stderr.write('[my-plugin] warn: my-optional-dep not installed. Run: bun add my-optional-dep\n');
     return html;
   }
 
@@ -151,7 +151,7 @@ This keeps the build working even when the optional dep is absent.
 
 Follow the same invariants as the rest of the project:
 
-- Never use `exec`/`execSync` with a string argument — use `execFileSync` with an explicit args array
+- Never use `exec`/`execSync` with a string argument — use `Bun.spawnSync` with an explicit args array
 - Validate any user-supplied values (URLs, file paths) before using them
 - Reject path traversal attempts (verify `resolve(path)` stays within `outputDir`)
 - Escape HTML attribute values before injecting them into the DOM

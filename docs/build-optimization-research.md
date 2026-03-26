@@ -47,7 +47,7 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 **What it does:** Scans HTML for `<link href="https://fonts.googleapis.com/...">` tags, downloads font files at build time, self-hosts them as static assets, replaces CDN links with local `<link rel="preload" as="font" crossorigin>`, applies `font-display: swap` to prevent FOIT (Flash of Invisible Text), and subsets to only the Unicode ranges actually used.
 
 **Frameworks:** Next.js (`next/font`), Nuxt (`@nuxt/fonts`), Astro (experimental Fonts API)
-**Key tool:** `subfont` (Node.js — full font audit from HTML)
+**Key tool:** `subfont` (Bun-compatible — full font audit from HTML)
 
 **No.JS applicability:** High. Detecting Google Fonts `<link>` tags and replacing them with self-hosted + preloaded equivalents is straightforward via jsdom. Even without full subsetting (which requires external tooling), converting to `font-display: swap` + local hosting is a significant gain.
 
@@ -61,7 +61,7 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 **What it does:** Scans `<img>` tags in the HTML, processes source images via Sharp to generate multiple sizes and modern formats (AVIF, WebP), replaces `<img>` with `<picture>` + `<source>` carrying `srcset` + `sizes`, and always sets `width` and `height` to prevent CLS.
 
 **Frameworks:** Astro (`<Image>`, `<Picture>`), Eleventy (`@11ty/eleventy-img`), Next.js (`next/image`), Nuxt (`@nuxt/image`), Angular (`NgOptimizedImage`)
-**Key tool:** Sharp — Node.js image processing
+**Key tool:** Sharp — Bun-compatible image processing
 
 **No.JS applicability:** High. B1 already identifies LCP candidates and applies `loading="lazy"`. The natural evolution is format generation (AVIF/WebP) and `srcset`. Eleventy's cache model (disk cache keyed by image hash + config) is the right approach to avoid expensive reruns.
 
@@ -75,11 +75,11 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 **What it does:** After the build, computes SHA-384 hashes for each `<script src>` and `<link rel="stylesheet" href>` pointing to external resources or CDNs, and injects `integrity="sha384-..."` + `crossorigin="anonymous"`.
 
 **Frameworks:** Vite (`vite-plugin-sri`), general practice in PCI DSS 4.0-compliant builds
-**Key tool:** Node.js built-in `crypto`
+**Key tool:** Bun built-in `crypto`
 
-**No.JS applicability:** Medium-High. Users referencing external scripts or CDN stylesheets benefit immediately. PCI DSS 4.0 (effective March 2025) requires integrity verification of scripts on payment pages. Node.js `crypto.createHash` makes the implementation trivial.
+**No.JS applicability:** Medium-High. Users referencing external scripts or CDN stylesheets benefit immediately. PCI DSS 4.0 (effective March 2025) requires integrity verification of scripts on payment pages. Bun `crypto.createHash` makes the implementation trivial.
 
-**Complexity:** Low (Node.js native crypto; direct HTML attribute injection)
+**Complexity:** Low (Bun native crypto; direct HTML attribute injection)
 **Performance impact:** Low direct — security benefit; prevents supply chain attacks and malicious CDN injection
 
 ---
@@ -117,9 +117,9 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 **What it does:** After all HTML processing, generates companion `.html.br` (Brotli) and `.html.gz` (gzip) files for each output file. Servers configured to serve pre-compressed files (Nginx `gzip_static`, Caddy static compression) serve them directly with no per-request CPU cost.
 
 **Frameworks:** Nuxt/Nitro (`compressPublicAssets`), `nuxt-precompress`, Vite (via plugins)
-**Key tool:** Node.js built-in `zlib` (no external dependencies)
+**Key tool:** Bun built-in `zlib` (no external dependencies)
 
-**No.JS applicability:** Medium. Zero new dependencies (Node.js `zlib.brotliCompress` + `zlib.gzip` are built-in). Value depends on the user's server configuration, but it is a zero-risk addition.
+**No.JS applicability:** Medium. Zero new dependencies (Bun `zlib.brotliCompress` + `zlib.gzip` are built-in). Value depends on the user's server configuration, but it is a zero-risk addition.
 
 **Complexity:** Low (native zlib; no additional dependencies)
 **Performance impact:** Medium — Brotli ~15–20% better compression than gzip on HTML; eliminates per-request compression CPU on static hosting
@@ -161,7 +161,7 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 
 **No.JS applicability:** High — and with a structural advantage. Because B2 and B5 inject inline `<style>` blocks, the exact content of all inline scripts and styles is known at the end of the B-series pipeline. A final step can compute hashes and emit the CSP `<meta>` tag. This puts No.JS at the same level as the most advanced security technique available in static site tooling today.
 
-**Complexity:** Low-Medium (Node.js `crypto.createHash('sha384')` on each inline element; the tricky part is ensuring no other script injects inline content after this step)
+**Complexity:** Low-Medium (Bun `crypto.createHash('sha384')` on each inline element; the tricky part is ensuring no other script injects inline content after this step)
 **Performance impact:** Low direct — security benefit; prevents XSS; required for PCI DSS 4.0
 
 ---
@@ -212,7 +212,7 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 
 **Frameworks:** Not built-in to any framework core; available as an Eleventy plugin, Astro integration (`astro-a11y`), CI step for all frameworks
 
-**No.JS applicability:** Medium. B1 already warns about missing `alt`. Extending this with axe-core in Node.js (via jsdom) against each HTML output page would catch ~30–40% of WCAG issues automatically. Auto-fixing missing `<html lang>` and `<title>` is trivial.
+**No.JS applicability:** Medium. B1 already warns about missing `alt`. Extending this with axe-core in Bun-compatible (via linkedom) against each HTML output page would catch ~30–40% of WCAG issues automatically. Auto-fixing missing `<html lang>` and `<title>` is trivial.
 
 **Complexity:** Medium (axe-core works with jsdom but has limitations vs. a real browser; Pa11y requires a headless browser, which is heavier)
 **Performance impact:** Low direct — compliance and inclusivity impact; risk mitigation for legal exposure (ADA/WCAG)
@@ -321,7 +321,7 @@ Astro, SvelteKit, Next.js, Nuxt, Qwik/QwikCity, SolidStart, Eleventy, HTMX ecosy
 
 | # | Technique | Rationale |
 |---|-----------|-----------|
-| 10 | **T4 — SRI Hash Injection** | Security-first; relevant for PCI DSS 4.0; native Node.js crypto. |
+| 10 | **T4 — SRI Hash Injection** | Security-first; relevant for PCI DSS 4.0; native Bun crypto. |
 | 11 | **T11 — View Transitions** | One CSS line per page. Browser support growing fast (Chrome, Edge, Safari 18.2+). |
 | 12 | **T16 — Third-Party Script Enforcement** | Detect blocking third-party scripts; enforce defer/async; log warnings. |
 | 13 | **T8 — PWA / Service Worker** | High impact but requires user configuration; better as an optional module. |

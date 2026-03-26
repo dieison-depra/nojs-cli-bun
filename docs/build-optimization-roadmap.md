@@ -391,8 +391,8 @@ Todos os scripts usam somente o que já é `devDependency` no projeto:
 |---|---|---|
 | `jsdom` | Parse e manipulação de HTML | ✅ |
 | `glob` | Descoberta de arquivos | ✅ |
-| `fs` (Node built-in) | Leitura/escrita de arquivos | ✅ |
-| `path` (Node built-in) | Resolução de paths | ✅ |
+| `fs` (Bun built-in) | Leitura/escrita de arquivos | ✅ |
+| `path` (Bun built-in) | Resolução de paths | ✅ |
 
 Os scripts B2 e B5 requerem pequenas adições no source do framework
 (3–5 linhas cada, sem breaking changes).

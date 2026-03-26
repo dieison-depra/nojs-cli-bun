@@ -123,7 +123,7 @@ Extract and inline above-the-fold CSS, converting full stylesheet links to async
 
 If `beasties` is not installed, the plugin logs a warning and passes the HTML through unchanged — it never breaks your build.
 
-Install: `npm install beasties`
+Install: `bun add beasties`
 
 ---
 
@@ -142,13 +142,13 @@ Generate AVIF and WebP variants at multiple widths for local `<img>` tags, wrapp
 - Skips images with `data-no-responsive`
 - Graceful fallback if `sharp` is not installed
 
-Install: `npm install sharp`
+Install: `bun add sharp`
 
 ---
 
 ### precompress-assets
 
-Generate `.br` (Brotli) and `.gz` (gzip) companion files for all compressible assets using Node's built-in `zlib`. The web server can then serve pre-compressed files directly (e.g. nginx `gzip_static on`).
+Generate `.br` (Brotli) and `.gz` (gzip) companion files for all compressible assets using Bun's built-in `zlib`. The web server can then serve pre-compressed files directly (e.g. nginx `gzip_static on`).
 
 ```js
 'precompress-assets': {
