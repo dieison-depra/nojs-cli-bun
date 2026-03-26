@@ -112,3 +112,73 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inject-sri-hashes', () => {
+  it('skips scripts without https:// (relative paths, http://, //)', async () => {
+    const input = [
+      '<html><head>',
+      '<script src="/local.js"></script>',
+      '<script src="http://example.com/lib.js"></script>',
+      '<script src="//cdn.example.com/lib.js"></script>',
+      '</head><body></body></html>',
+    ].join('');
+    await writeTestHtml('index.html', input);
+    await prebuild({ cwd: testDir, plugins: { 'inject-sri-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('integrity=');
+  });
+
+  it('skips scripts that already have an integrity attribute', async () => {
+    const input = [
+      '<html><head>',
+      '<script src="https://cdn.example.com/lib.js" integrity="sha384-abc123" crossorigin="anonymous"></script>',
+      '</head><body></body></html>',
+    ].join('');
+    await writeTestHtml('index.html', input);
+    await prebuild({ cwd: testDir, plugins: { 'inject-sri-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('integrity="sha384-abc123"');
+    expect((html.match(/integrity=/g) || []).length).toBe(1);
+  });
+
+  it('skips interpolated URLs', async () => {
+    const input = [
+      '<html><head>',
+      '<script src="https://cdn.example.com/{version}/lib.js"></script>',
+      '</head><body></body></html>',
+    ].join('');
+    await writeTestHtml('index.html', input);
+    await prebuild({ cwd: testDir, plugins: { 'inject-sri-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('integrity=');
+  });
+
+  it('skips hosts listed in the skip config option', async () => {
+    const input = [
+      '<html><head>',
+      '<script src="https://cdn.example.com/lib.js"></script>',
+      '</head><body></body></html>',
+    ].join('');
+    await writeTestHtml('index.html', input);
+    await prebuild({
+      cwd: testDir,
+      plugins: { 'inject-sri-hashes': { skip: ['cdn.example.com'] } },
+    });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('integrity=');
+  });
+
+  it('does not break the build when the URL is unreachable', async () => {
+    const input = [
+      '<html><head>',
+      '<script src="https://this-host-does-not-exist.invalid/lib.js"></script>',
+      '</head><body></body></html>',
+    ].join('');
+    await writeTestHtml('index.html', input);
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'inject-sri-hashes': { timeout: 500 } } }),
+    ).resolves.not.toThrow();
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('integrity=');
+  });
+});
