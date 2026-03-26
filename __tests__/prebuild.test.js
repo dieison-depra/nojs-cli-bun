@@ -112,3 +112,52 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('audit-accessibility', () => {
+  it('does not throw for compliant HTML', async () => {
+    const compliantHtml = '<html lang="en"><head></head><body>' +
+      '<img src="/hero.jpg" alt="Hero image">' +
+      '<a href="/about">About</a>' +
+      '<label for="name">Name</label><input id="name" type="text">' +
+      '<h1>Title</h1><h2>Subtitle</h2>' +
+      '</body></html>';
+    await writeTestHtml('index.html', compliantHtml);
+    await expect(prebuild({ cwd: testDir, plugins: { 'audit-accessibility': true } })).resolves.not.toThrow();
+  });
+
+  it('throws when failOnError is true and <img> has no alt', async () => {
+    await writeTestHtml('index.html', '<html lang="en"><head></head><body><img src="/hero.jpg"></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'audit-accessibility': { failOnError: true } } })
+    ).rejects.toThrow(/violation/);
+  });
+
+  it('does not throw when failOnError is false despite violations', async () => {
+    await writeTestHtml('index.html', '<html lang="en"><head></head><body><img src="/hero.jpg"></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'audit-accessibility': { failOnError: false } } })
+    ).resolves.not.toThrow();
+  });
+
+  it('returns HTML unchanged (audit only, no DOM mutation)', async () => {
+    const original = '<html lang="en"><head></head><body><img src="/hero.jpg" alt="Hero"></body></html>';
+    await writeTestHtml('index.html', original);
+    await prebuild({ cwd: testDir, plugins: { 'audit-accessibility': true } });
+    const result = await readTestHtml('index.html');
+    expect(result).toBe(original);
+  });
+
+  it('does not flag <img alt=""> (decorative image with empty alt is valid)', async () => {
+    await writeTestHtml('index.html', '<html lang="en"><head></head><body><img src="/deco.jpg" alt=""></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'audit-accessibility': { failOnError: true } } })
+    ).resolves.not.toThrow();
+  });
+
+  it('detects missing lang attribute on <html>', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'audit-accessibility': { failOnError: true } } })
+    ).rejects.toThrow(/violation/);
+  });
+});
