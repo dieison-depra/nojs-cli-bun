@@ -112,3 +112,31 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('generate-responsive-images', () => {
+  it('returns HTML unchanged when sharp is not installed (graceful degradation)', async () => {
+    const originalHtml = '<html><head></head><body><img src="/hero.jpg"></body></html>';
+    await writeTestHtml('index.html', originalHtml);
+    // sharp is not installed; runner must not throw and HTML must survive intact
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'generate-responsive-images': true } })
+    ).resolves.not.toThrow();
+    const html = await readTestHtml('index.html');
+    // HTML should still contain the original img tag (unchanged because sharp absent)
+    expect(html).toContain('<img');
+    expect(html).toContain('/hero.jpg');
+  });
+
+  it('does not throw when sharp is absent', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><img src="/photo.png"></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'generate-responsive-images': true } })
+    ).resolves.toBeDefined();
+  });
+
+  it('plugin can be enabled without crashing', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><p>No images here</p></body></html>');
+    const result = await prebuild({ cwd: testDir, plugins: { 'generate-responsive-images': true } });
+    expect(result.plugins).toContain('generate-responsive-images');
+  });
+});
