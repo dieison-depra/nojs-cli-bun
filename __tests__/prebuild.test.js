@@ -112,3 +112,27 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inline-critical-css', () => {
+  it('returns HTML unchanged when beasties is not installed', async () => {
+    const input = '<html><head><link rel="stylesheet" href="/styles.css"></head><body><h1>Hello</h1></body></html>';
+    await writeTestHtml('index.html', input);
+    await prebuild({ cwd: testDir, plugins: { 'inline-critical-css': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toBe(input);
+  });
+
+  it('does not throw when beasties is absent', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'inline-critical-css': true } })
+    ).resolves.not.toThrow();
+  });
+
+  it('plugin can be enabled without crashing', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><p>Content</p></body></html>');
+    const result = await prebuild({ cwd: testDir, plugins: { 'inline-critical-css': true } });
+    expect(result).toBeDefined();
+    expect(result.files).toBeGreaterThanOrEqual(0);
+  });
+});
