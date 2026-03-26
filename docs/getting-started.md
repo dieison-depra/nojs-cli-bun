@@ -14,7 +14,7 @@ Verify the installation:
 nojs --version
 ```
 
-**Requirements:** Bun ≥ 1.1.
+**Requirements:** Bun ≥ 1.3.11.
 
 ## Scaffold a Project
 

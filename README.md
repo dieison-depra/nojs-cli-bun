@@ -26,7 +26,7 @@ The CLI is the companion toolchain for No.JS projects. It provides everything yo
 bun install -g @erickxavier/nojs-cli
 ```
 
-Requires **Bun >= 1.1**.
+Requires **Bun >= 1.3.11**.
 
 ---
 
