@@ -40,12 +40,53 @@ export default {
       existingHrefs.add(src);
     }
 
+    // B3 — i18n locale preload
+    const lang = doc.documentElement?.getAttribute('lang') || '';
+    if (lang && !isEnglishLocale(lang) && isValidLocaleCode(lang)) {
+      const localeHref = `/locales/${lang}.json`;
+      if (!existingHrefs.has(localeHref)) {
+        const link = doc.createElement('link');
+        link.setAttribute('rel', 'preload');
+        link.setAttribute('as', 'fetch');
+        link.setAttribute('href', localeHref);
+        link.setAttribute('crossorigin', 'anonymous');
+        head.appendChild(link);
+        existingHrefs.add(localeHref);
+      }
+    }
+
+    // B4 — Base API DNS prefetch
+    if (config.apiBase) {
+      try {
+        const origin = new URL(config.apiBase).origin;
+        const existingDnsPrefetch = new Set(
+          [...head.querySelectorAll('link[rel="dns-prefetch"]')].map((el) => el.getAttribute('href')),
+        );
+        if (!existingDnsPrefetch.has(origin)) {
+          const link = doc.createElement('link');
+          link.setAttribute('rel', 'dns-prefetch');
+          link.setAttribute('href', origin);
+          head.appendChild(link);
+        }
+      } catch {
+        // invalid URL, skip
+      }
+    }
+
     return doc.toString();
   },
 };
 
 function isInterpolated(url) {
   return /\{[^}]+\}/.test(url);
+}
+
+function isEnglishLocale(lang) {
+  return lang === 'en' || lang.startsWith('en-');
+}
+
+function isValidLocaleCode(lang) {
+  return /^[a-z]{2}$/.test(lang) || /^[a-z]{2}-[A-Z]{2}$/.test(lang);
 }
 
 function isCrossOrigin(url) {

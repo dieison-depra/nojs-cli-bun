@@ -69,6 +69,62 @@ describe('inject-resource-hints', () => {
   });
 });
 
+describe('inject-resource-hints — B3/B4 extensions', () => {
+  it('B3: injects locale preload for non-English lang attribute', async () => {
+    await writeTestHtml('index.html', '<html lang="pt-BR"><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('rel="preload"');
+    expect(html).toContain('href="/locales/pt-BR.json"');
+    expect(html).toContain('crossorigin="anonymous"');
+  });
+
+  it('B3: does not inject locale preload when lang is "en"', async () => {
+    await writeTestHtml('index.html', '<html lang="en"><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('/locales/');
+  });
+
+  it('B3: does not inject locale preload when lang is "en-US"', async () => {
+    await writeTestHtml('index.html', '<html lang="en-US"><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('/locales/');
+  });
+
+  it('B3: does not duplicate locale preload if already present', async () => {
+    await writeTestHtml('index.html', '<html lang="pt-BR"><head><link rel="preload" as="fetch" href="/locales/pt-BR.json" crossorigin="anonymous"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': true } });
+    const html = await readTestHtml('index.html');
+    const count = (html.match(/\/locales\/pt-BR\.json/g) || []).length;
+    expect(count).toBe(1);
+  });
+
+  it('B4: injects dns-prefetch when config.apiBase is set', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': { apiBase: 'https://api.example.com' } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('rel="dns-prefetch"');
+    expect(html).toContain('href="https://api.example.com"');
+  });
+
+  it('B4: does not inject dns-prefetch when config.apiBase is absent', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('rel="dns-prefetch"');
+  });
+
+  it('B4: does not duplicate dns-prefetch if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="dns-prefetch" href="https://api.example.com"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-resource-hints': { apiBase: 'https://api.example.com' } } });
+    const html = await readTestHtml('index.html');
+    const count = (html.match(/rel="dns-prefetch"/g) || []).length;
+    expect(count).toBe(1);
+  });
+});
+
 describe('inject-head-attrs', () => {
   it('injects title from static page-title', async () => {
     await writeTestHtml('index.html', '<html><head></head><body page-title="\'My Site\'"></body></html>');
