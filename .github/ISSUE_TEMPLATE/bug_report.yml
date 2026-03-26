@@ -1,0 +1,128 @@
+name: Bug Report
+description: Report a bug in the NoJS CLI
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below so we can reproduce and fix it.
+
+  - type: input
+    id: version
+    attributes:
+      label: NoJS CLI Version
+      description: "Run `nojs version` or check your package.json."
+      placeholder: "e.g., 1.10.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Bug Category
+      description: Which CLI command or area is affected?
+      options:
+        - init (project scaffolding)
+        - prebuild (HTML optimization)
+        - dev (dev server / live reload)
+        - validate (template validation)
+        - plugin (plugin manager)
+        - CLI general (argument parsing, help, version)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      description: "Run `node --version`."
+      placeholder: "e.g., v20.11.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "e.g., macOS 15, Windows 11, Ubuntu 24.04"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        List the exact commands and steps to reproduce the issue.
+        Include any relevant `nojs.config.json` configuration.
+      placeholder: |
+        1. Run `nojs init ./my-app --routing --yes`
+        2. Run `nojs dev ./my-app`
+        3. Open http://localhost:3000
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: terminal-output
+    attributes:
+      label: Terminal Output
+      description: Paste any relevant terminal output or error messages.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        If relevant, paste your `nojs.config.json` or the command flags you used.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, related issues, or anything else that helps.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this hasn't been reported yet
+          required: true
+        - label: I can reproduce this with the latest version of NoJS CLI
+          required: true
