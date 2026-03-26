@@ -112,3 +112,61 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('enforce-script-loading', () => {
+  it('adds defer to third-party scripts without defer/async', async () => {
+    await writeTestHtml('index.html', '<html><head><script src="https://cdn.example.com/lib.js"></script></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('defer');
+  });
+
+  it('does not modify scripts that already have defer', async () => {
+    const original = '<html><head><script src="https://cdn.example.com/lib.js" defer></script></head><body></body></html>';
+    await writeTestHtml('index.html', original);
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': true } });
+    const html = await readTestHtml('index.html');
+    // Should have exactly one defer (not duplicated)
+    expect(html.match(/defer/g)?.length).toBe(1);
+  });
+
+  it('does not modify scripts that already have async', async () => {
+    await writeTestHtml('index.html', '<html><head><script src="https://cdn.example.com/lib.js" async></script></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('async');
+    expect(html).not.toContain('defer');
+  });
+
+  it('does not modify same-origin scripts', async () => {
+    await writeTestHtml('index.html', '<html><head><script src="/local/lib.js"></script></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('defer');
+    expect(html).not.toContain('async');
+  });
+
+  it('does not modify <script type="module"> tags', async () => {
+    await writeTestHtml('index.html', '<html><head><script src="https://cdn.example.com/mod.js" type="module"></script></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('defer');
+    expect(html).not.toContain(' async');
+  });
+
+  it('uses async when config.strategy is async', async () => {
+    await writeTestHtml('index.html', '<html><head><script src="https://cdn.example.com/lib.js"></script></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': { strategy: 'async' } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('async');
+    expect(html).not.toContain('defer');
+  });
+
+  it('skips scripts from hosts in the allowList', async () => {
+    await writeTestHtml('index.html', '<html><head><script src="https://cdn.example.com/lib.js"></script></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'enforce-script-loading': { allowList: ['cdn.example.com'] } } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('defer');
+    expect(html).not.toContain('async');
+  });
+});
