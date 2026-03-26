@@ -5,7 +5,7 @@
 Install the CLI globally with Bun:
 
 ```bash
-bun install -g @erickxavier/nojs-cli
+bun install -g @dieison-depra/nojs-cli-bun
 ```
 
 Verify the installation:
@@ -15,6 +15,10 @@ nojs --version
 ```
 
 **Requirements:** Bun ≥ 1.3.11.
+
+> **Recommended pairing:** use this CLI with [`@dieison-depra/nojs-bun`](https://github.com/dieison-depra/nojs-bun),
+> the Bun-native port of the No.JS framework. The two projects share the same Bun-first conventions
+> and are developed together.
 
 ## Scaffold a Project
 

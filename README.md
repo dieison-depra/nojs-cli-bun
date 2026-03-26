@@ -9,6 +9,9 @@ Scaffold projects, optimize HTML for production, run a dev server with live relo
 > [Bun](https://bun.sh) — the dev server uses `Bun.serve()`, the test suite runs on `bun:test`,
 > spawning uses `Bun.spawnSync`, and all tooling (`biome`, `knip`) is Bun-first.
 > This fork maintains its own feature roadmap and may periodically synchronise with upstream.
+>
+> **Recommended pairing:** use this CLI alongside [`@dieison-depra/nojs-bun`](https://github.com/dieison-depra/nojs-bun),
+> the Bun-native port of the No.JS framework itself.
 
 The CLI is the companion toolchain for No.JS projects. It provides everything you need to go from a blank folder to a production-ready application:
 
@@ -23,7 +26,7 @@ The CLI is the companion toolchain for No.JS projects. It provides everything yo
 ## Install
 
 ```bash
-bun install -g @erickxavier/nojs-cli
+bun install -g @dieison-depra/nojs-cli-bun
 ```
 
 Requires **Bun >= 1.3.11**.
@@ -264,12 +267,21 @@ __tests__/                      ← bun:test unit tests
 
 ## Ecosystem
 
+### Bun Edition (this fork)
+
 | Tool | Description |
 |------|-------------|
-| [No.JS](https://github.com/ErickXavier/no-js) | The HTML-first reactive framework |
+| [`@dieison-depra/nojs-bun`](https://github.com/dieison-depra/nojs-bun) | No.JS framework — Bun-native port ⭐ recommended pairing |
+| **`@dieison-depra/nojs-cli-bun`** | This package — Bun-native CLI |
+
+### Original (Node.js)
+
+| Tool | Description |
+|------|-------------|
+| [No.JS](https://github.com/ErickXavier/no-js) | The HTML-first reactive framework (original) |
+| [NoJS-CLI](https://github.com/ErickXavier/NoJS-CLI) | Original Node.js CLI (upstream of this fork) |
 | [NoJS-LSP](https://github.com/ErickXavier/nojs-lsp) | VS Code extension — autocomplete, hover docs, diagnostics |
 | [NoJS-MCP](https://github.com/ErickXavier/nojs-mcp) | MCP server — AI tools for building No.JS apps |
-| **NoJS-CLI** | This package |
 
 ---
 

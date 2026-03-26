@@ -1,5 +1,5 @@
 {
-	"name": "@erickxavier/nojs-cli",
+	"name": "@dieison-depra/nojs-cli-bun",
 	"version": "1.10.1",
 	"description": "Official CLI for No.JS — scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
 	"main": "src/cli.js",
@@ -36,11 +36,11 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/ErickXavier/NoJS-CLI.git"
+		"url": "git+https://github.com/dieison-depra/nojs-cli-bun.git"
 	},
-	"homepage": "https://github.com/ErickXavier/NoJS-CLI#readme",
+	"homepage": "https://github.com/dieison-depra/nojs-cli-bun#readme",
 	"bugs": {
-		"url": "https://github.com/ErickXavier/NoJS-CLI/issues"
+		"url": "https://github.com/dieison-depra/nojs-cli-bun/issues"
 	},
 	"files": [
 		"src/",
