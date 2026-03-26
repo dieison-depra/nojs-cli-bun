@@ -112,3 +112,63 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('audit-meta-tags', () => {
+  it('injects <meta charset="UTF-8"> when missing', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toMatch(/charset/i);
+    expect(html).toContain('UTF-8');
+  });
+
+  it('injects <meta name="viewport"> when missing', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('viewport');
+    expect(html).toContain('width=device-width, initial-scale=1');
+  });
+
+  it('does not duplicate charset if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><meta charset="UTF-8"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': true } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/charset/gi) || [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('does not duplicate viewport if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': true } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/viewport/gi) || [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('throws when failOnError: true and title is missing', async () => {
+    await writeTestHtml('index.html', '<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="test"></head><body></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': { failOnError: true } } })
+    ).rejects.toThrow(/audit-meta-tags/);
+  });
+
+  it('does not throw when failOnError: false (default) and tags are missing', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await expect(
+      prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': true } })
+    ).resolves.toBeDefined();
+  });
+
+  it('does not modify HTML when all tags already present', async () => {
+    const original = '<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Test</title><meta name="description" content="Test page"></head><body></body></html>';
+    await writeTestHtml('index.html', original);
+    await prebuild({ cwd: testDir, plugins: { 'audit-meta-tags': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('charset');
+    expect(html).toContain('viewport');
+    expect(html).toContain('<title>Test</title>');
+    expect(html).toContain('description');
+    expect(html).toContain('lang="en"');
+  });
+});
