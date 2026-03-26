@@ -112,3 +112,68 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('minify-html', () => {
+  it('collapses whitespace between tags', async () => {
+    await writeTestHtml('index.html', '<html>\n  <head>\n  </head>\n  <body>\n    <p>Hello</p>\n  </body>\n</html>');
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toMatch(/>\s+</);
+  });
+
+  it('removes HTML comments', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><!-- this is a comment --><p>Hello</p></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('<!-- this is a comment -->');
+    expect(html).toContain('<p>Hello</p>');
+  });
+
+  it('preserves content inside <script> tags', async () => {
+    const scriptContent = '<script>var x =  1;\n  var y = 2;</script>';
+    await writeTestHtml('index.html', `<html><head>${scriptContent}</head><body></body></html>`);
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('var x =  1;\n  var y = 2;');
+  });
+
+  it('preserves content inside <style> tags', async () => {
+    const styleContent = '<style>body  {  color:  red;  }\n  p {  margin:  0;  }</style>';
+    await writeTestHtml('index.html', `<html><head>${styleContent}</head><body></body></html>`);
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('body  {  color:  red;  }');
+  });
+
+  it('preserves IE conditional comments', async () => {
+    await writeTestHtml('index.html', '<html><head><!--[if IE]><link rel="stylesheet" href="ie.css"><![endif]--></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<!--[if IE]>');
+  });
+
+  it('is idempotent (running twice gives same result)', async () => {
+    await writeTestHtml('index.html', '<html>\n  <head>\n  </head>\n  <body>\n    <!-- comment -->\n    <p>Hello</p>\n  </body>\n</html>');
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const firstPass = await readTestHtml('index.html');
+    await writeTestHtml('index.html', firstPass);
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const secondPass = await readTestHtml('index.html');
+    expect(secondPass).toBe(firstPass);
+  });
+
+  it('is a no-op on already-minified HTML', async () => {
+    const minified = '<html><head></head><body><p>Hello</p></body></html>';
+    await writeTestHtml('index.html', minified);
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toBe(minified);
+  });
+
+  it('respects removeComments: false config option', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><!-- keep me --><p>Hello</p></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'minify-html': { removeComments: false } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('<!-- keep me -->');
+  });
+});
