@@ -1,4 +1,4 @@
-import { search, install, update, remove, list } from '../plugin/manager.js';
+import { install, list, remove, search, update } from "../plugin/manager.js";
 
 const HELP = `
 nojs plugin — Manage No.JS plugins
@@ -30,40 +30,42 @@ Examples:
 `;
 
 export async function run(argv) {
-  if (argv.includes('-h') || argv.includes('--help') || argv.length === 0) {
-    console.log(HELP.trim());
-    return;
-  }
+	if (argv.includes("-h") || argv.includes("--help") || argv.length === 0) {
+		console.log(HELP.trim());
+		return;
+	}
 
-  const action = argv[0];
-  const args = argv.slice(1);
+	const action = argv[0];
+	const args = argv.slice(1);
 
-  switch (action) {
-    case 'search':
-      if (!args[0]) throw new Error('Usage: nojs plugin search <query>');
-      await search(args[0]);
-      break;
+	switch (action) {
+		case "search":
+			if (!args[0]) throw new Error("Usage: nojs plugin search <query>");
+			await search(args[0]);
+			break;
 
-    case 'install':
-      if (!args[0]) throw new Error('Usage: nojs plugin install <name>');
-      await install(args[0]);
-      break;
+		case "install":
+			if (!args[0]) throw new Error("Usage: nojs plugin install <name>");
+			await install(args[0]);
+			break;
 
-    case 'update':
-      if (!args[0]) throw new Error('Usage: nojs plugin update <name>');
-      await update(args[0]);
-      break;
+		case "update":
+			if (!args[0]) throw new Error("Usage: nojs plugin update <name>");
+			await update(args[0]);
+			break;
 
-    case 'remove':
-      if (!args[0]) throw new Error('Usage: nojs plugin remove <name>');
-      await remove(args[0]);
-      break;
+		case "remove":
+			if (!args[0]) throw new Error("Usage: nojs plugin remove <name>");
+			await remove(args[0]);
+			break;
 
-    case 'list':
-      await list();
-      break;
+		case "list":
+			await list();
+			break;
 
-    default:
-      throw new Error(`Unknown action: "${action}". Run "nojs plugin --help" for usage.`);
-  }
+		default:
+			throw new Error(
+				`Unknown action: "${action}". Run "nojs plugin --help" for usage.`,
+			);
+	}
 }

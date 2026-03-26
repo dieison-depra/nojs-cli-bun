@@ -1,4 +1,4 @@
-import { createServer } from '../dev/server.js';
+import { createServer } from "../dev/server.js";
 
 const HELP = `
 nojs dev — Start a local dev server with live reload
@@ -24,46 +24,64 @@ Features:
 `;
 
 export async function run(argv) {
-  if (argv.includes('-h') || argv.includes('--help')) {
-    console.log(HELP.trim());
-    return;
-  }
+	if (argv.includes("-h") || argv.includes("--help")) {
+		console.log(HELP.trim());
+		return;
+	}
 
-  const args = parseArgs(argv);
+	const args = parseArgs(argv);
 
-  const server = await createServer({
-    port: args.port,
-    root: args.root,
-    liveReload: args.liveReload,
-    open: args.open,
-    quiet: args.quiet,
-  });
+	const server = await createServer({
+		port: args.port,
+		root: args.root,
+		liveReload: args.liveReload,
+		open: args.open,
+		quiet: args.quiet,
+	});
 
-  const shutdown = () => {
-    console.log('\nShutting down...');
-    server.stop();
-    process.exit(0);
-  };
+	const shutdown = () => {
+		console.log("\nShutting down...");
+		server.stop();
+		process.exit(0);
+	};
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+	process.on("SIGINT", shutdown);
+	process.on("SIGTERM", shutdown);
 }
 
 function parseArgs(argv) {
-  const args = { port: 3000, root: '.', liveReload: true, open: false, quiet: false };
+	const args = {
+		port: 3000,
+		root: ".",
+		liveReload: true,
+		open: false,
+		quiet: false,
+	};
 
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    switch (arg) {
-      case '--port': args.port = parseInt(argv[++i], 10); break;
-      case '--no-reload': args.liveReload = false; break;
-      case '--open': args.open = true; break;
-      case '--quiet': case '-q': args.quiet = true; break;
-      default:
-        if (!arg.startsWith('-')) args.root = arg;
-        else throw new Error(`Unknown option: ${arg}. Run "nojs dev --help" for usage.`);
-    }
-  }
+	for (let i = 0; i < argv.length; i++) {
+		const arg = argv[i];
+		switch (arg) {
+			case "--port":
+				args.port = parseInt(argv[++i], 10);
+				break;
+			case "--no-reload":
+				args.liveReload = false;
+				break;
+			case "--open":
+				args.open = true;
+				break;
+			case "--quiet":
+			case "-q":
+				args.quiet = true;
+				break;
+			default:
+				if (!arg.startsWith("-")) args.root = arg;
+				else
+					throw new Error(
+						`Unknown option: ${arg}. Run "nojs dev --help" for usage.`,
+					);
+		}
+	}
 
-  return args;
+	return args;
 }

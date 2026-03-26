@@ -1,51 +1,64 @@
 {
-  "name": "@erickxavier/nojs-cli",
-  "version": "1.10.1",
-  "description": "Official CLI for No.JS — scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
-  "main": "src/cli.js",
-  "bin": {
-    "nojs": "bin/nojs.js"
-  },
-  "type": "module",
-  "scripts": {
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun test"
-  },
-  "keywords": [
-    "nojs",
-    "cli",
-    "scaffold",
-    "prebuild",
-    "seo",
-    "resource-hints",
-    "speculation-rules",
-    "sitemap",
-    "html-optimization",
-    "dev-server",
-    "validation",
-    "plugins"
-  ],
-  "author": "Erick Xavier",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ErickXavier/NoJS-CLI.git"
-  },
-  "homepage": "https://github.com/ErickXavier/NoJS-CLI#readme",
-  "bugs": {
-    "url": "https://github.com/ErickXavier/NoJS-CLI/issues"
-  },
-  "files": [
-    "src/",
-    "bin/"
-  ],
-  "engines": {
-    "bun": ">=1.1.0"
-  },
-  "dependencies": {
-    "linkedom": "^0.18.9"
-  },
-  "devDependencies": {}
+	"name": "@erickxavier/nojs-cli",
+	"version": "1.10.1",
+	"description": "Official CLI for No.JS — scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
+	"main": "src/cli.js",
+	"bin": {
+		"nojs": "bin/nojs.js"
+	},
+	"type": "module",
+	"scripts": {
+		"test": "bun test",
+		"test:watch": "bun test --watch",
+		"test:coverage": "bun test --coverage",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --write .",
+		"format": "biome format --write .",
+		"check": "biome check --write .",
+		"knip": "knip",
+		"prepublishOnly": "bun test"
+	},
+	"keywords": [
+		"nojs",
+		"cli",
+		"scaffold",
+		"prebuild",
+		"seo",
+		"resource-hints",
+		"speculation-rules",
+		"sitemap",
+		"html-optimization",
+		"dev-server",
+		"validation",
+		"plugins"
+	],
+	"author": "Erick Xavier",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ErickXavier/NoJS-CLI.git"
+	},
+	"homepage": "https://github.com/ErickXavier/NoJS-CLI#readme",
+	"bugs": {
+		"url": "https://github.com/ErickXavier/NoJS-CLI/issues"
+	},
+	"files": [
+		"src/",
+		"bin/"
+	],
+	"engines": {
+		"bun": ">=1.1.0"
+	},
+	"dependencies": {
+		"linkedom": "^0.18.9"
+	},
+	"optionalDependencies": {
+		"beasties": "*",
+		"sharp": "*"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.7",
+		"bun-types": "latest",
+		"knip": "^5.87.0"
+	}
 }

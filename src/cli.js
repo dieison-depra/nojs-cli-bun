@@ -1,19 +1,19 @@
-import pkg from '../package.json' with { type: 'json' };
+import pkg from "../package.json" with { type: "json" };
 
 const COMMANDS = {
-  init: () => import('./commands/init.js'),
-  prebuild: () => import('./commands/prebuild.js'),
-  dev: () => import('./commands/dev.js'),
-  validate: () => import('./commands/validate.js'),
-  plugin: () => import('./commands/plugin.js'),
+	init: () => import("./commands/init.js"),
+	prebuild: () => import("./commands/prebuild.js"),
+	dev: () => import("./commands/dev.js"),
+	validate: () => import("./commands/validate.js"),
+	plugin: () => import("./commands/plugin.js"),
 };
 
 const ALIASES = {
-  i: 'init',
-  b: 'prebuild',
-  d: 'dev',
-  v: 'validate',
-  p: 'plugin',
+	i: "init",
+	b: "prebuild",
+	d: "dev",
+	v: "validate",
+	p: "plugin",
 };
 
 const HELP = `
@@ -39,30 +39,30 @@ Documentation: https://github.com/ErickXavier/NoJS-CLI
 `;
 
 export async function run(argv) {
-  const raw = argv[0];
+	const raw = argv[0];
 
-  if (!raw || raw === '-h' || raw === '--help' || raw === 'help') {
-    console.log(HELP.trim());
-    return;
-  }
+	if (!raw || raw === "-h" || raw === "--help" || raw === "help") {
+		console.log(HELP.trim());
+		return;
+	}
 
-  if (raw === '-v' || raw === '--version' || raw === 'version') {
-    console.log(pkg.version);
-    return;
-  }
+	if (raw === "-v" || raw === "--version" || raw === "version") {
+		console.log(pkg.version);
+		return;
+	}
 
-  const command = ALIASES[raw] || raw;
-  const loader = COMMANDS[command];
-  if (!loader) {
-    console.error(`Unknown command: "${raw}". Run "nojs --help" for usage.`);
-    process.exit(1);
-  }
+	const command = ALIASES[raw] || raw;
+	const loader = COMMANDS[command];
+	if (!loader) {
+		console.error(`Unknown command: "${raw}". Run "nojs --help" for usage.`);
+		process.exit(1);
+	}
 
-  try {
-    const mod = await loader();
-    await mod.run(argv.slice(1));
-  } catch (err) {
-    console.error(err.message);
-    process.exit(1);
-  }
+	try {
+		const mod = await loader();
+		await mod.run(argv.slice(1));
+	} catch (err) {
+		console.error(err.message);
+		process.exit(1);
+	}
 }
