@@ -112,3 +112,48 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('precompress-assets', () => {
+  it('generates .br companion for HTML files when brotli: true', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body>hello</body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'precompress-assets': { brotli: true, gzip: false } } });
+    const brContent = await readFile(join(testDir, 'index.html.br'));
+    expect(brContent).toBeInstanceOf(Buffer);
+    expect(brContent.length).toBeGreaterThan(0);
+  });
+
+  it('generates .gz companion for HTML files when gzip: true', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body>hello</body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'precompress-assets': { brotli: false, gzip: true } } });
+    const gzContent = await readFile(join(testDir, 'index.html.gz'));
+    expect(gzContent).toBeInstanceOf(Buffer);
+    expect(gzContent.length).toBeGreaterThan(0);
+  });
+
+  it('skips .br generation when brotli: false', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body>hello</body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'precompress-assets': { brotli: false, gzip: true } } });
+    await expect(readFile(join(testDir, 'index.html.br'))).rejects.toThrow();
+  });
+
+  it('skips .gz generation when gzip: false', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body>hello</body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'precompress-assets': { brotli: true, gzip: false } } });
+    await expect(readFile(join(testDir, 'index.html.gz'))).rejects.toThrow();
+  });
+
+  it('also compresses .css and .js files if present in the output dir', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body>hello</body></html>');
+    await writeFile(join(testDir, 'styles.css'), 'body { color: red; }', 'utf-8');
+    await writeFile(join(testDir, 'app.js'), 'console.log("hello");', 'utf-8');
+    await prebuild({ cwd: testDir, plugins: { 'precompress-assets': { brotli: true, gzip: true } } });
+    const cssBr = await readFile(join(testDir, 'styles.css.br'));
+    const cssGz = await readFile(join(testDir, 'styles.css.gz'));
+    const jsBr = await readFile(join(testDir, 'app.js.br'));
+    const jsGz = await readFile(join(testDir, 'app.js.gz'));
+    expect(cssBr.length).toBeGreaterThan(0);
+    expect(cssGz.length).toBeGreaterThan(0);
+    expect(jsBr.length).toBeGreaterThan(0);
+    expect(jsGz.length).toBeGreaterThan(0);
+  });
+});
