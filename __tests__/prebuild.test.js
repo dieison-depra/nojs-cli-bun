@@ -112,3 +112,64 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inject-csp-hashes', () => {
+  it('injects CSP meta tag with sha384 hash for inline script', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script>console.log("hello");</script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('Content-Security-Policy');
+    expect(html).toContain('sha384-');
+    expect(html).toContain('script-src');
+  });
+
+  it('injects CSP meta tag with sha384 hash for inline style', async () => {
+    await writeTestHtml('index.html', '<html><head><style>body { color: red; }</style></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('Content-Security-Policy');
+    expect(html).toContain('sha384-');
+    expect(html).toContain('style-src');
+  });
+
+  it('handles both inline script and style in same document', async () => {
+    await writeTestHtml('index.html', '<html><head><style>body { margin: 0; }</style></head><body><script>var x = 1;</script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('Content-Security-Policy');
+    expect(html).toContain('script-src');
+    expect(html).toContain('style-src');
+    expect(html).toContain('sha384-');
+  });
+
+  it('does not hash external scripts with src attribute', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script src="/app.js"></script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('Content-Security-Policy');
+  });
+
+  it('does not hash script type speculationrules', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body><script type="speculationrules">{"prerender":[]}</script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('Content-Security-Policy');
+  });
+
+  it('updates existing CSP meta tag without duplicating', async () => {
+    await writeTestHtml('index.html', '<html><head><meta http-equiv="Content-Security-Policy" content="default-src \'self\'"></head><body><script>alert(1);</script></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/Content-Security-Policy/g) || [];
+    expect(matches.length).toBe(1);
+    expect(html).toContain('sha384-');
+  });
+
+  it('is a no-op when no inline scripts or styles exist', async () => {
+    const original = '<html><head></head><body><p>Hello</p></body></html>';
+    await writeTestHtml('index.html', original);
+    await prebuild({ cwd: testDir, plugins: { 'inject-csp-hashes': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('Content-Security-Policy');
+  });
+});
