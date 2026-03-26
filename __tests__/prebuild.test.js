@@ -112,3 +112,53 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inject-canonical-url', () => {
+  it('injects canonical for index.html → https://example.com/', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-canonical-url': { siteUrl: 'https://example.com', cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('href="https://example.com/"');
+  });
+
+  it('injects canonical for about/index.html → https://example.com/about/', async () => {
+    await writeTestHtml('about/index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-canonical-url': { siteUrl: 'https://example.com', cwd: testDir } } });
+    const html = await readTestHtml('about/index.html');
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('href="https://example.com/about/"');
+  });
+
+  it('injects canonical for blog/post.html → https://example.com/blog/post.html', async () => {
+    await writeTestHtml('blog/post.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-canonical-url': { siteUrl: 'https://example.com', cwd: testDir } } });
+    const html = await readTestHtml('blog/post.html');
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('href="https://example.com/blog/post.html"');
+  });
+
+  it('does not inject when siteUrl is not set', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-canonical-url': { cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('rel="canonical"');
+  });
+
+  it('does not duplicate if canonical already present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="canonical" href="https://other.com/"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-canonical-url': { siteUrl: 'https://example.com', cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/rel="canonical"/g);
+    expect(matches).toHaveLength(1);
+    expect(html).toContain('href="https://other.com/"');
+  });
+
+  it('normalizes trailing slash in siteUrl (no double slash)', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-canonical-url': { siteUrl: 'https://example.com/', cwd: testDir } } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('href="https://example.com/"');
+    expect(html).not.toContain('https://example.com//');
+  });
+});
