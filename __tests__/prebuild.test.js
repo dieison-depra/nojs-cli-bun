@@ -112,3 +112,69 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('inject-jsonld', () => {
+  it('injects LD+JSON with name from <title>', async () => {
+    await writeTestHtml('index.html', '<html><head><title>My Page</title></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('application/ld+json');
+    const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    const schema = JSON.parse(match[1]);
+    expect(schema['@context']).toBe('https://schema.org');
+    expect(schema['@type']).toBe('WebPage');
+    expect(schema.name).toBe('My Page');
+  });
+
+  it('includes description from meta description', async () => {
+    await writeTestHtml('index.html', '<html><head><title>My Page</title><meta name="description" content="A great page"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': true } });
+    const html = await readTestHtml('index.html');
+    const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    const schema = JSON.parse(match[1]);
+    expect(schema.description).toBe('A great page');
+  });
+
+  it('includes url from canonical link', async () => {
+    await writeTestHtml('index.html', '<html><head><title>My Page</title><link rel="canonical" href="https://example.com/my-page"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': true } });
+    const html = await readTestHtml('index.html');
+    const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    const schema = JSON.parse(match[1]);
+    expect(schema.url).toBe('https://example.com/my-page');
+  });
+
+  it('includes inLanguage from <html lang>', async () => {
+    await writeTestHtml('index.html', '<html lang="pt-BR"><head><title>Minha Página</title></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': true } });
+    const html = await readTestHtml('index.html');
+    const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    const schema = JSON.parse(match[1]);
+    expect(schema.inLanguage).toBe('pt-BR');
+  });
+
+  it('does not inject when LD+JSON already exists (idempotent)', async () => {
+    const existing = JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebPage', name: 'Existing' });
+    await writeTestHtml('index.html', `<html><head><title>My Page</title><script type="application/ld+json">${existing}</script></head><body></body></html>`);
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': true } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/<script type="application\/ld\+json">/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  it('does not inject when no title and no siteUrl', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).not.toContain('application/ld+json');
+  });
+
+  it('respects config.type === WebSite', async () => {
+    await writeTestHtml('index.html', '<html><head><title>My Site</title></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'inject-jsonld': { type: 'WebSite' } } });
+    const html = await readTestHtml('index.html');
+    const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    const schema = JSON.parse(match[1]);
+    expect(schema['@type']).toBe('WebSite');
+  });
+});
