@@ -27,3 +27,4 @@ Welcome to the NoJS CLI documentation. Use the links below to navigate to the to
 - [Build Optimization Research](build-optimization-research.md) — T1–T18 technique analysis
 - [Build Optimization Roadmap](build-optimization-roadmap.md) — B-series and T-series roadmap
 - [Implementation Plan](implementation-plan.md) — Branch plan and test conventions
+- [Dependency Analysis](dependency-analysis.md) — Security risk and replaceability review of all external dependencies
