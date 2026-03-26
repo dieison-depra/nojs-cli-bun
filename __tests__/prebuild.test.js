@@ -112,3 +112,54 @@ describe('optimize-images', () => {
     expect(html).toContain('loading="lazy"');
   });
 });
+
+describe('generate-pwa-manifest', () => {
+  it('injects <link rel="manifest"> into head', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'generate-pwa-manifest': true } });
+    const html = await readTestHtml('index.html');
+    expect(html).toContain('rel="manifest"');
+    expect(html).toContain('href="/manifest.webmanifest"');
+  });
+
+  it('does not duplicate manifest link if already present', async () => {
+    await writeTestHtml('index.html', '<html><head><link rel="manifest" href="/manifest.webmanifest"></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'generate-pwa-manifest': true } });
+    const html = await readTestHtml('index.html');
+    const matches = html.match(/rel="manifest"/g) || [];
+    expect(matches.length).toBe(1);
+  });
+
+  it('generates manifest.webmanifest file in output dir', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'generate-pwa-manifest': true } });
+    const raw = await readFile(join(testDir, 'manifest.webmanifest'), 'utf-8');
+    const manifest = JSON.parse(raw);
+    expect(manifest).toBeDefined();
+  });
+
+  it('manifest JSON includes name, short_name, display, start_url', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({ cwd: testDir, plugins: { 'generate-pwa-manifest': true } });
+    const raw = await readFile(join(testDir, 'manifest.webmanifest'), 'utf-8');
+    const manifest = JSON.parse(raw);
+    expect(manifest).toHaveProperty('name');
+    expect(manifest).toHaveProperty('short_name');
+    expect(manifest).toHaveProperty('display');
+    expect(manifest).toHaveProperty('start_url');
+  });
+
+  it('manifest respects config options (custom name, themeColor)', async () => {
+    await writeTestHtml('index.html', '<html><head></head><body></body></html>');
+    await prebuild({
+      cwd: testDir,
+      plugins: {
+        'generate-pwa-manifest': { name: 'My Custom App', themeColor: '#ff0000' },
+      },
+    });
+    const raw = await readFile(join(testDir, 'manifest.webmanifest'), 'utf-8');
+    const manifest = JSON.parse(raw);
+    expect(manifest.name).toBe('My Custom App');
+    expect(manifest.theme_color).toBe('#ff0000');
+  });
+});
