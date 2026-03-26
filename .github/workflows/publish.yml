@@ -1,14 +1,12 @@
 name: Publish to npm
 
 on:
-  # TODO: enable tag-based trigger after reviewing full release flow
-  # push:
-  #   tags:
-  #     - 'v*'
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
   publish:
+    name: Publish @dieison-depra/nojs-cli-bun
     runs-on: ubuntu-latest
 
     permissions:
@@ -18,20 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-          cache: npm
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Run tests
-        run: npm test
+        run: bun test
 
-      - name: Publish
-        run: npm publish --provenance --access public
+      - name: Publish to npm
+        run: bun publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

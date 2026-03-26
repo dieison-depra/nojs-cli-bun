@@ -1,0 +1,33 @@
+name: PR Review Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    name: Automated Review Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check formatting
+        run: bun run format -- --reporter=github
+
+      - name: Lint
+        run: bun run lint -- --reporter=github
+
+      - name: Dead code / unused exports
+        run: bun run knip
+
+      - name: Tests with coverage
+        run: bun test --coverage

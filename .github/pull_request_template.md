@@ -14,6 +14,7 @@
 - [ ] Documentation update
 - [ ] Refactor (no functional changes)
 - [ ] Tests (adding or updating tests)
+- [ ] Bun runtime / tooling change
 
 ## Changes
 
@@ -26,7 +27,9 @@
 - [ ] I have read the [CONTRIBUTING](../CONTRIBUTING.md) guide
 - [ ] My code follows the project conventions
 - [ ] I have added/updated tests that cover my changes
-- [ ] All tests pass (`npm test`)
-- [ ] I have updated the README if needed
+- [ ] All tests pass (`bun test`)
+- [ ] Biome lint/format passes (`bun run check`)
+- [ ] Knip reports no issues (`bun run knip`)
+- [ ] I have updated documentation if needed
 - [ ] I have updated the CHANGELOG if applicable
-- [ ] CLI runs without errors (`node bin/nojs.js --help`)
+- [ ] CLI runs without errors (`bun bin/nojs.js --help`)
