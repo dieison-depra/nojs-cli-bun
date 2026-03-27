@@ -24,6 +24,7 @@ import inlineAnimationCss from "./inline-animation-css.js";
 import inlineCriticalCss from "./inline-critical-css.js";
 import inlineSvg from "./inline-svg.js";
 import minifyHtml from "./minify-html.js";
+import normalizeDirectives from "./normalize-directives.js";
 import optimizeFonts from "./optimize-fonts.js";
 import optimizeImages from "./optimize-images.js";
 import precompressAssets from "./precompress-assets.js";
@@ -62,4 +63,5 @@ export const builtinPlugins = {
 	[injectEventDelegation.name]: injectEventDelegation,
 	[compileTemplates.name]: compileTemplates,
 	[hoistStaticContent.name]: hoistStaticContent,
+	[normalizeDirectives.name]: normalizeDirectives,
 };
