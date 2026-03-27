@@ -3,6 +3,7 @@ name: Publish to npm
 on:
   release:
     types: [published]
+  workflow_dispatch: # Allow manual trigger for testing or fixups
 
 jobs:
   publish:
@@ -10,11 +11,13 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
-      id-token: write
+      contents: write # Need to push tags/commits
+      id-token: write # Required for provenance (Trusted Publishing)
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for tagging
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -26,9 +29,32 @@ jobs:
       - name: Run tests
         run: bun test
 
+      - name: Build
+        run: bun run build
+
+      - name: Check for changes after build
+        id: git-check
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add bin/nojs.js
+          if git diff --staged --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and tag build
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git commit -m "chore: build v$VERSION"
+          git tag -fa v$VERSION -m "Release v$VERSION"
+          git push origin main --tags --force
+
       - name: Publish to npm
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          bun publish --access public
+          npm publish --provenance --access public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

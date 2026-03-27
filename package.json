@@ -1,6 +1,6 @@
 {
 	"name": "@dieison-depra/nojs-cli-bun",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Official CLI for No.JS — scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
 	"main": "src/cli.js",
 	"bin": {
@@ -16,7 +16,12 @@
 		"format": "biome format --write .",
 		"check": "biome check --write .",
 		"knip": "knip",
-		"prepublishOnly": "bun test"
+		"build": "bun build ./src/cli.js --target bun --outfile ./bin/nojs.js",
+		"prepublishOnly": "bun run build && bun test"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
 	},
 	"keywords": [
 		"nojs",
