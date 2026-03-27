@@ -6,6 +6,7 @@ import generateDeployConfig from "./generate-deploy-config.js";
 import generatePwaManifest from "./generate-pwa-manifest.js";
 import generateResponsiveImages from "./generate-responsive-images.js";
 import generateSitemap from "./generate-sitemap.js";
+import hoistStaticContent from "./hoist-static-content.js";
 import injectCanonicalUrl from "./inject-canonical-url.js";
 import injectCspHashes from "./inject-csp-hashes.js";
 import injectEventDelegation from "./inject-event-delegation.js";
@@ -60,4 +61,5 @@ export const builtinPlugins = {
 	[treeShakeFramework.name]: treeShakeFramework,
 	[injectEventDelegation.name]: injectEventDelegation,
 	[compileTemplates.name]: compileTemplates,
+	[hoistStaticContent.name]: hoistStaticContent,
 };
