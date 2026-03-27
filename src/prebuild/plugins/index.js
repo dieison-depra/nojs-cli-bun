@@ -1,5 +1,6 @@
 import auditAccessibility from "./audit-accessibility.js";
 import auditMetaTags from "./audit-meta-tags.js";
+import compileTemplates from "./compile-templates.js";
 import enforceScriptLoading from "./enforce-script-loading.js";
 import generateDeployConfig from "./generate-deploy-config.js";
 import generatePwaManifest from "./generate-pwa-manifest.js";
@@ -58,4 +59,5 @@ export const builtinPlugins = {
 	[inlineSvg.name]: inlineSvg,
 	[treeShakeFramework.name]: treeShakeFramework,
 	[injectEventDelegation.name]: injectEventDelegation,
+	[compileTemplates.name]: compileTemplates,
 };
