@@ -2263,3 +2263,226 @@ describe("generate-deploy-config", () => {
 		expect(content).toContain("index.html");
 	});
 });
+
+// ─── tree-shake-framework ────────────────────────────────────────────────────
+
+async function createMockFrameworkSrc(dir) {
+	// Minimal no-js src that mirrors the import pattern tree-shake-framework reads
+	const srcDir = join(dir, "node_modules", "@erickxavier", "no-js", "src");
+	const dirsDir = join(srcDir, "directives");
+	await mkdir(dirsDir, { recursive: true });
+
+	const coreModules = [
+		"globals.js",
+		"evaluate.js",
+		"context.js",
+		"registry.js",
+		"dom.js",
+		"filters.js",
+		"animations.js",
+		"router.js",
+		"devtools.js",
+		"fetch.js",
+		"i18n.js",
+		"cdn.js",
+	];
+	const directiveModules = [
+		"state.js",
+		"http.js",
+		"binding.js",
+		"conditionals.js",
+		"loops.js",
+		"styling.js",
+		"events.js",
+		"refs.js",
+		"validation.js",
+		"i18n.js",
+		"dnd.js",
+		"head.js",
+	];
+
+	for (const m of coreModules) {
+		await writeFile(join(srcDir, m), `export const _${m.replace(".js","")} = true;\n`, "utf-8");
+	}
+	for (const m of directiveModules) {
+		await writeFile(join(dirsDir, m), `export const _${m.replace(".js","")} = true;\n`, "utf-8");
+	}
+
+	// index.js with the same side-effect import pattern as the real framework
+	const indexContent = [
+		'import "./globals.js";',
+		'import "./evaluate.js";',
+		'import "./context.js";',
+		'import "./registry.js";',
+		'import "./dom.js";',
+		'import "./filters.js";',
+		'import "./directives/state.js";',
+		'import "./directives/http.js";',
+		'import "./directives/binding.js";',
+		'import "./directives/conditionals.js";',
+		'import "./directives/loops.js";',
+		'import "./directives/styling.js";',
+		'import "./directives/events.js";',
+		'import "./directives/refs.js";',
+		'import "./directives/validation.js";',
+		'import "./directives/i18n.js";',
+		'import "./directives/dnd.js";',
+		'import "./directives/head.js";',
+		'const NoJS = { version: "0.0.0-test", init() {} };',
+		'export default NoJS;',
+	].join("\n");
+	await writeFile(join(srcDir, "index.js"), indexContent, "utf-8");
+
+	return srcDir;
+}
+
+describe("tree-shake-framework", () => {
+	it("skips when no no-js script tag is present", async () => {
+		await writeTestHtml(
+			"index.html",
+			"<html><head></head><body><div state='{}'>hi</div></body></html>",
+		);
+		const warns = [];
+		const origWarn = console.warn;
+		console.warn = (...a) => warns.push(a.join(" "));
+		await prebuild({
+			cwd: testDir,
+			plugins: { "tree-shake-framework": true },
+		});
+		console.warn = origWarn;
+		expect(warns.some((w) => w.includes("no no-js script tag"))).toBe(true);
+	});
+
+	it("skips when framework source cannot be found", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head><body></body></html>',
+		);
+		const warns = [];
+		const origWarn = console.warn;
+		console.warn = (...a) => warns.push(a.join(" "));
+		await prebuild({
+			cwd: testDir,
+			plugins: { "tree-shake-framework": true },
+		});
+		console.warn = origWarn;
+		expect(warns.some((w) => w.includes("source not found"))).toBe(true);
+	});
+
+	it("detects CDN script src pattern", async () => {
+		await createMockFrameworkSrc(testDir);
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head><body></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('src="nojs.bundle.js"');
+	});
+
+	it("builds bundle and replaces script tag", async () => {
+		await createMockFrameworkSrc(testDir);
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head><body><div state="{}"></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('src="nojs.bundle.js"');
+		expect(html).not.toContain("cdn.no-js.dev");
+		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
+		expect(bundle.length).toBeGreaterThan(0);
+	});
+
+	it("excludes dnd module when no drag/drop attributes are present", async () => {
+		await createMockFrameworkSrc(testDir);
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
+			'<body><div state="{}"><p show="true">hi</p></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
+		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
+		// dnd module path should not appear when draggable/droppable/drag-handle not used
+		expect(bundle).not.toContain("dnd");
+	});
+
+	it("excludes validation module when no validate attributes are present", async () => {
+		await createMockFrameworkSrc(testDir);
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
+			'<body><div state="{}"></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
+		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
+		expect(bundle).not.toContain("validation");
+	});
+
+	it("excludes i18n module when no t/lang attributes are present", async () => {
+		await createMockFrameworkSrc(testDir);
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
+			'<body><div if="true">hi</div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
+		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
+		expect(bundle).not.toContain("/i18n");
+	});
+
+	it("detects on-* event attributes and includes events module", async () => {
+		await createMockFrameworkSrc(testDir);
+		// Two builds: with and without on-click — bundle sizes must differ
+		await writeTestHtml(
+			"with-events.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
+			'<body><button on-click="fn()">click</button></body></html>',
+		);
+		await writeTestHtml(
+			"without-events.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
+			'<body><p>no events</p></body></html>',
+		);
+		// First: only with-events to get events module
+		const td1 = join(testDir, "run1");
+		await mkdir(td1, { recursive: true });
+		await createMockFrameworkSrc(td1);
+		await writeFile(
+			join(td1, "index.html"),
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
+			'<body><button on-click="fn()">click</button></body></html>',
+			"utf-8",
+		);
+		await prebuild({ cwd: td1, plugins: { "tree-shake-framework": true } });
+		const bundleWithEvents = await readFile(join(td1, "nojs.bundle.js"), "utf-8");
+		expect(bundleWithEvents).not.toContain("dnd");
+	});
+
+	it("replaces script tag across multiple HTML files", async () => {
+		await createMockFrameworkSrc(testDir);
+		const scriptTag = '<script src="https://cdn.no-js.dev/nojs.min.js"></script>';
+		await writeTestHtml("index.html", `<html><head>${scriptTag}</head><body></body></html>`);
+		await writeTestHtml("about.html", `<html><head>${scriptTag}</head><body></body></html>`);
+		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
+		const index = await readTestHtml("index.html");
+		const about = await readTestHtml("about.html");
+		expect(index).toContain('src="nojs.bundle.js"');
+		expect(about).toContain('src="nojs.bundle.js"');
+	});
+
+	it("accepts explicit frameworkSrc config", async () => {
+		const srcDir = await createMockFrameworkSrc(testDir);
+		await writeTestHtml(
+			"index.html",
+			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head><body></body></html>',
+		);
+		// Use explicit path, not node_modules discovery
+		await prebuild({
+			cwd: testDir,
+			plugins: { "tree-shake-framework": { frameworkSrc: srcDir } },
+		});
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('src="nojs.bundle.js"');
+	});
+});

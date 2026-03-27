@@ -25,6 +25,7 @@ import optimizeFonts from "./optimize-fonts.js";
 import optimizeImages from "./optimize-images.js";
 import precompressAssets from "./precompress-assets.js";
 import purgeUnusedCss from "./purge-unused-css.js";
+import treeShakeFramework from "./tree-shake-framework.js";
 
 export const builtinPlugins = {
 	[injectResourceHints.name]: injectResourceHints,
@@ -54,4 +55,5 @@ export const builtinPlugins = {
 	[purgeUnusedCss.name]: purgeUnusedCss,
 	[auditAccessibility.name]: auditAccessibility,
 	[inlineSvg.name]: inlineSvg,
+	[treeShakeFramework.name]: treeShakeFramework,
 };

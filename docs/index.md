@@ -18,7 +18,7 @@ Welcome to the NoJS CLI documentation. Use the links below to navigate to the to
 ## Prebuild System
 
 - [Prebuild Overview](prebuild/index.md) — How the plugin pipeline works
-  - [Built-in Plugins Reference](prebuild/plugins.md) — All 26 plugins documented
+  - [Built-in Plugins Reference](prebuild/plugins.md) — All 28 plugins documented
   - [Creating Plugins](prebuild/creating-plugins.md) — Write and distribute your own plugins
 
 ## Reference

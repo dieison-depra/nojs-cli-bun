@@ -84,6 +84,7 @@ export default {
     'inline-animation-css': true,
     'inject-visibility-css': true,
     'inject-template-hints': true,
+    'tree-shake-framework': true,   // requires: @erickxavier/no-js installed
 
     // 5. Asset optimization
     'optimize-images': true,
@@ -103,6 +104,7 @@ export default {
     // 8. File generators (finalize hooks)
     'generate-sitemap': { siteUrl: 'https://example.com' },
     'generate-pwa-manifest': { name: 'My App' },
+    'generate-deploy-config': { targets: ['netlify'] },
     'precompress-assets': true,
 
     // 9. Responsive images (requires: bun add sharp)

@@ -120,5 +120,5 @@ nojs plugin install npm:my-nojs-plugin
 ## Next Steps
 
 - [Commands Reference](commands/index.md) — detailed flags and options for each command
-- [Prebuild Plugins](prebuild/plugins.md) — the full list of 26 built-in optimization plugins
+- [Prebuild Plugins](prebuild/plugins.md) — the full list of 28 built-in optimization plugins
 - [Configuration](configuration.md) — all configuration options
