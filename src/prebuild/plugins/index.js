@@ -7,6 +7,7 @@ import generateResponsiveImages from "./generate-responsive-images.js";
 import generateSitemap from "./generate-sitemap.js";
 import injectCanonicalUrl from "./inject-canonical-url.js";
 import injectCspHashes from "./inject-csp-hashes.js";
+import injectEventDelegation from "./inject-event-delegation.js";
 import injectHeadAttrs from "./inject-head-attrs.js";
 import injectJsonld from "./inject-jsonld.js";
 import injectModulepreload from "./inject-modulepreload.js";
@@ -56,4 +57,5 @@ export const builtinPlugins = {
 	[auditAccessibility.name]: auditAccessibility,
 	[inlineSvg.name]: inlineSvg,
 	[treeShakeFramework.name]: treeShakeFramework,
+	[injectEventDelegation.name]: injectEventDelegation,
 };
