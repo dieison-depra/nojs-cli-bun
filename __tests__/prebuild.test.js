@@ -2142,3 +2142,124 @@ describe("generate-sitemap — extended exclusions and sorting", () => {
 		expect(mangoIdx).toBeLessThan(zebraIdx);
 	});
 });
+
+describe("generate-deploy-config", () => {
+	const BASE_HTML = [
+		"<html><head></head><body>",
+		'<template route="/"></template>',
+		'<template route="/about"></template>',
+		"</body></html>",
+	].join("");
+
+	it("generates Netlify _redirects by default", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({ cwd: testDir, plugins: { "generate-deploy-config": true } });
+		const content = await readFile(join(testDir, "_redirects"), "utf-8");
+		expect(content.trim()).toBe("/* /index.html 200");
+	});
+
+	it("generates Vercel vercel.json when target is vercel", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": { targets: ["vercel"] } },
+		});
+		const content = await readFile(join(testDir, "vercel.json"), "utf-8");
+		const json = JSON.parse(content);
+		expect(json.rewrites).toEqual([
+			{ source: "/(.*)", destination: "/index.html" },
+		]);
+	});
+
+	it("generates Apache .htaccess when target is apache", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": { targets: ["apache"] } },
+		});
+		const content = await readFile(join(testDir, ".htaccess"), "utf-8");
+		expect(content).toContain("RewriteEngine On");
+		expect(content).toContain("RewriteBase /");
+		expect(content).toContain("RewriteRule . /index.html [L]");
+	});
+
+	it("generates nginx nginx.conf when target is nginx", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": { targets: ["nginx"] } },
+		});
+		const content = await readFile(join(testDir, "nginx.conf"), "utf-8");
+		expect(content).toContain("location /");
+		expect(content).toContain("try_files $uri $uri/ /index.html");
+	});
+
+	it("generates multiple targets in one pass", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({
+			cwd: testDir,
+			plugins: {
+				"generate-deploy-config": { targets: ["netlify", "vercel"] },
+			},
+		});
+		const redirects = await readFile(join(testDir, "_redirects"), "utf-8");
+		const vercel = await readFile(join(testDir, "vercel.json"), "utf-8");
+		expect(redirects).toContain("index.html");
+		expect(vercel).toContain("rewrites");
+	});
+
+	it("applies base path to Netlify output", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": { base: "/app" } },
+		});
+		const content = await readFile(join(testDir, "_redirects"), "utf-8");
+		expect(content.trim()).toBe("/app/* /app/index.html 200");
+	});
+
+	it("applies base path to Vercel output", async () => {
+		await writeTestHtml("index.html", BASE_HTML);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": { targets: ["vercel"], base: "/app" } },
+		});
+		const json = JSON.parse(await readFile(join(testDir, "vercel.json"), "utf-8"));
+		expect(json.rewrites[0].source).toBe("/app/(.*)");
+		expect(json.rewrites[0].destination).toBe("/app/index.html");
+	});
+
+	it("warns when useHash: true is found in inline script", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				"<script>NoJS.config({ router: { useHash: true } })</script>",
+				"</body></html>",
+			].join(""),
+		);
+		const warns = [];
+		const origWarn = console.warn;
+		console.warn = (...args) => warns.push(args.join(" "));
+		await prebuild({ cwd: testDir, plugins: { "generate-deploy-config": true } });
+		console.warn = origWarn;
+		expect(warns.some((w) => w.includes("useHash"))).toBe(true);
+	});
+
+	it("still generates files even when useHash is detected", async () => {
+		await writeTestHtml(
+			"index.html",
+			[
+				"<html><head></head><body>",
+				"<script>NoJS.config({ router: { useHash: true } })</script>",
+				"</body></html>",
+			].join(""),
+		);
+		const origWarn = console.warn;
+		console.warn = () => {};
+		await prebuild({ cwd: testDir, plugins: { "generate-deploy-config": true } });
+		console.warn = origWarn;
+		const content = await readFile(join(testDir, "_redirects"), "utf-8");
+		expect(content).toContain("index.html");
+	});
+});
