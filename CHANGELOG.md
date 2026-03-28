@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-03-28
+
+### Added
+
+- **CLI Executable Entry Point** — Fixed the CLI bundle to be executable by adding an explicit entry point check in `src/cli.js`.
+- **Automatic Meta Tag Injection** — The `audit-meta-tags` plugin now automatically injects missing `<meta charset>`, `<meta name="viewport">`, `<title>`, and `<meta name="description">` (derived from title) when `inject` is enabled.
+- **Template Content Optimization** — Improved `hoist-static-content` and `inject-event-delegation` plugins to search and optimize elements inside `<template>` tags, syncing changes back to `innerHTML`.
+- **Improved Partial Detection** — Audit plugins now automatically detect and skip HTML fragments (partials), reducing log noise and avoiding incorrect injections.
+
 ## [1.2.0] — 2026-03-28
 
 ### Added

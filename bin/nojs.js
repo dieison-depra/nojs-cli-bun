@@ -15419,7 +15419,7 @@ var init_plugin = __esm(() => {
 // package.json
 var package_default = {
   name: "@dieison-depra/nojs-cli-bun",
-  version: "1.0.1",
+  version: "1.2.1",
   description: "Official CLI for No.JS \u2014 scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
   main: "src/cli.js",
   bin: {
