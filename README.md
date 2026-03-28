@@ -16,7 +16,7 @@ Scaffold projects, optimize HTML for production, run a dev server with live relo
 The CLI is the companion toolchain for No.JS projects. It provides everything you need to go from a blank folder to a production-ready application:
 
 - **Scaffold** a new project with an interactive wizard (`init`)
-- **Optimize** your HTML output with 26 built-in prebuild plugins (`prebuild`)
+- **Optimize** your HTML output with **34 built-in prebuild plugins** (`prebuild`)
 - **Develop** locally with a fast file server and live reload (`dev`)
 - **Validate** your templates for common No.JS mistakes before shipping (`validate`)
 - **Manage** community and official plugins (`plugin`)
@@ -57,7 +57,7 @@ nojs prebuild
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `nojs init [path]` | `i` | Scaffold a new No.JS project with optional routing, i18n, and API base |
-| `nojs prebuild [dir]` | `b` | Build-time HTML optimization — 26 plugins for performance, SEO, security, and accessibility |
+| `nojs prebuild [dir]` | `b` | Build-time HTML optimization — 34 plugins for performance, SEO, security, and accessibility |
 | `nojs dev [path]` | `d` | Local dev server with live reload (SSE), SPA fallback, colored request logging |
 | `nojs validate [files]` | `v` | Validate No.JS templates against 10 rules (CI-friendly JSON output) |
 | `nojs plugin <action>` | `p` | Manage plugins — `search`, `install`, `update`, `remove`, `list` |
@@ -66,166 +66,78 @@ nojs prebuild
 
 ---
 
-## Init
+## Performance Architecture (Evolution)
 
-Interactive wizard that generates a ready-to-go No.JS project:
+Following the [Roadmap 2026](docs/ARCHITECTURE_EVOLUTION.md), this CLI edition implements advanced build-time strategies to minimize Time-to-Interactive (TTI) and First Contentful Paint (FCP):
 
-```bash
-nojs init ./my-app
-```
-
-Non-interactive mode:
-
-```bash
-nojs init ./my-app --routing --i18n --locales en,pt --api https://api.example.com --yes
-```
-
-Generates `index.html`, route pages (`.tpl`), i18n locale files, and a `nojs.config.json`.
-
----
-
-## Dev Server
-
-```bash
-nojs dev              # serve current directory
-nojs dev ./docs/      # serve a specific path
-nojs dev --port 8080  # custom port
-nojs dev --open       # open browser on start
-nojs dev --quiet      # suppress request logging
-nojs dev --no-reload  # disable live reload
-```
-
-Features: live reload via SSE, SPA fallback (serves `index.html` for unmatched routes), MIME type detection, path traversal protection.
+- **Islands Architecture:** Automatically identifies reactive sub-trees and isolates them, allowing the framework to skip 70-90% of the DOM during initial hydration.
+- **Template Compilation:** Compiles `<template route>` blocks into optimized JavaScript functions, eliminating the need for HTML parsing at runtime.
+- **Route-level Code Splitting:** Generates independent JS chunks for each route, loaded on-demand as the user navigates.
+- **Differential Serving:** Serves modern ESNext bundles to modern browsers and optimized ES2015 fallbacks to legacy ones.
+- **Content Hashing:** Ensures aggressive caching with stable, content-based fingerprints for all generated assets.
 
 ---
 
 ## Prebuild
 
-The `prebuild` command runs a configurable pipeline of **26 built-in plugins** that apply build-time transformations to your HTML files. Plugins are opt-in — enable only what you need in `nojs-prebuild.config.js`.
+The `prebuild` command runs a configurable pipeline of **34 built-in plugins**. Plugins are opt-in — enable only what you need in `nojs-prebuild.config.js`.
 
 ```bash
 nojs prebuild            # process current directory
 nojs prebuild ./dist/    # process a specific path
 ```
 
-### Performance
+### High-Impact Performance (New)
 | Plugin | What it does |
 |--------|-------------|
-| `inject-resource-hints` | Preload/prefetch hints for fetch directives and route templates |
-| `inject-modulepreload` | `modulepreload` hints for ES module scripts |
-| `inject-speculation-rules` | Speculation Rules API for near-instant SPA navigation |
+| `identify-islands` | Mark reactive DOM sub-trees to enable selective hydration |
+| `compile-templates-to-js` | Compile HTML templates into JS chunks with route-splitting |
+| `differential-serving` | Apply `module/nomodule` pattern and generate legacy bundles |
+| `generate-service-worker` | Auto-generate `sw.js` with precache manifest for offline-first |
+| `generate-import-map` | Map bare specifiers (like `nojs`) to versioned/bundled URLs |
+| `fingerprint-assets` | Add content hashes to JS/CSS files for immutable caching |
+| `generate-early-hints` | Generate `_headers` (Netlify/Cloudflare) for H2 Early Hints |
+| `inject-i18n-preload` | Inhibit waterfall by preloading the default locale JSON |
+
+### Assets & Optimization
+| Plugin | What it does |
+|--------|-------------|
+| `tree-shake-framework` | Bundle only the No.JS modules your HTML actually uses |
 | `optimize-images` | Lazy loading, LCP priority, and fetchpriority hints |
-| `inject-view-transitions` | `@view-transition` CSS for smooth same-origin navigation |
-| `inline-critical-css` | Inline above-fold CSS, async-load full sheet *(requires `beasties`)* |
+| `inline-critical-css` | Inline above-fold CSS *(requires `beasties`)* |
 | `generate-responsive-images` | AVIF/WebP srcset generation *(requires `sharp`)* |
 | `precompress-assets` | `.br` and `.gz` companion files via Bun zlib |
-| `optimize-fonts` | Google Fonts preconnect + `font-display:swap` |
 | `minify-html` | Whitespace collapse and comment removal |
 | `inline-svg` | Replace `<img src="*.svg">` with inline `<svg>` |
+| `optimize-fonts` | Google Fonts preconnect + `font-display:swap` |
 
 ### SEO & Metadata
 | Plugin | What it does |
 |--------|-------------|
-| `inject-head-attrs` | Inject title, description, and canonical from No.JS page directives |
+| `inject-head-attrs` | Inject title, description, and canonical from page directives |
 | `inject-og-twitter` | Open Graph and Twitter Card meta tags |
-| `inject-canonical-url` | `<link rel="canonical">` from `siteUrl` config + file path |
-| `generate-sitemap` | `sitemap.xml` from No.JS route definitions |
+| `inject-canonical-url` | `<link rel="canonical">` from `siteUrl` + path |
+| `generate-sitemap` | `sitemap.xml` from route definitions |
 | `inject-jsonld` | WebPage/WebSite JSON-LD structured data |
-| `audit-meta-tags` | Auto-inject charset/viewport, warn on missing title/description/lang |
-
-### No.JS Runtime
-| Plugin | What it does |
-|--------|-------------|
-| `inline-animation-css` | Inline only the keyframes used by `animate=` directives |
-| `inject-visibility-css` | Hide `if=/show=/hide=` elements until the runtime processes them |
-| `inject-template-hints` | Preload stylesheets and inline skeleton CSS for loading templates |
-
-### Security
-| Plugin | What it does |
-|--------|-------------|
-| `inject-csp-hashes` | SHA-384 CSP `<meta>` tag for inline scripts and styles |
-| `inject-sri-hashes` | `integrity` + `crossorigin` for external scripts and stylesheets |
-| `enforce-script-loading` | Add `defer`/`async` to third-party scripts |
-
-### Quality & Accessibility
-| Plugin | What it does |
-|--------|-------------|
-| `audit-accessibility` | WCAG quick-checks: alt text, link names, labels, headings, lang |
-| `purge-unused-css` | Remove CSS rules with no matching selectors in the HTML |
-| `generate-pwa-manifest` | `manifest.webmanifest` + manifest link tag |
+| `audit-meta-tags` | Auto-inject charset/viewport, audit SEO tags |
 
 ---
 
 ## Configuration
 
-Create `nojs-prebuild.config.js` in your project root:
-
 ```js
 // nojs-prebuild.config.js
 export default {
   plugins: {
-    'inject-resource-hints': true,
-    'inject-head-attrs': true,
-    'inject-og-twitter': true,
-    'generate-sitemap': { siteUrl: 'https://example.com' },
-    'inject-canonical-url': { siteUrl: 'https://example.com' },
+    'identify-islands': true,
+    'compile-templates-to-js': true,
+    'generate-service-worker': true,
+    'fingerprint-assets': true,
     'minify-html': true,
-    'optimize-images': true,
-    'inject-view-transitions': true,
+    'tree-shake-framework': true,
   },
 };
 ```
-
----
-
-## Validate
-
-```bash
-nojs validate *.html
-nojs validate src/ --format json   # JSON output for CI
-```
-
-Rules: missing `as` on fetch, `each` without `in`, `foreach` without `from`, `model` on non-form elements, `bind-html` warning, routes without `route-view`, empty event handlers, loops without `key`, duplicate store names, `validate` outside `<form>`.
-
----
-
-## Plugin Manager
-
-Hybrid plugin manager — CDN for official plugins, npm for community packages:
-
-```bash
-nojs plugin search analytics
-nojs plugin install @nojs/analytics
-nojs plugin list
-nojs plugin update @nojs/analytics
-nojs plugin remove @nojs/analytics
-```
-
-CDN plugins get SRI integrity hashes (sha384) computed automatically.
-
----
-
-## Writing Your Own Plugin
-
-Plugins are plain ES modules:
-
-```js
-// my-plugin.js
-export default {
-  name: 'my-plugin',
-  description: 'Does something useful.',
-
-  async process(html, { filePath, config, allFiles }) {
-    // transform html string and return it
-    return html;
-  },
-
-  // optional — called once after all files are processed
-  async finalize({ outputDir, config, processedFiles }) {},
-};
-```
-
-See [docs/prebuild/creating-plugins.md](docs/prebuild/creating-plugins.md) for the full plugin development guide.
 
 ---
 
@@ -233,72 +145,35 @@ See [docs/prebuild/creating-plugins.md](docs/prebuild/creating-plugins.md) for t
 
 | Guide | Description |
 |-------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation, first project, basic workflow |
-| [Commands Reference](docs/commands/index.md) | All CLI commands in detail |
-| [Prebuild Plugins](docs/prebuild/plugins.md) | Full reference for all 26 built-in plugins |
-| [Creating Plugins](docs/prebuild/creating-plugins.md) | How to write and distribute custom plugins |
+| [Architecture Evolution](docs/ARCHITECTURE_EVOLUTION.md) | Vision, Roadmap, and Metrics Strategy |
+| [Prebuild Plugins](docs/prebuild/plugins.md) | Full reference for all 34 built-in plugins |
+| [Creating Plugins](docs/prebuild/creating-plugins.md) | How to write custom plugins |
 | [Configuration](docs/configuration.md) | Config file reference |
-| [Dependency Analysis](docs/dependency-analysis.md) | Security risk and replaceability review |
 
 ---
 
 ## Architecture
 
 ```
-bin/nojs.js                     ← executable entry point
 src/
-  cli.js                        ← command dispatcher
-  commands/                     ← thin command wrappers
-  init/generator.js             ← project scaffold
-  dev/server.js                 ← HTTP server + SSE live reload
-  validate/rules.js             ← template validation rules
-  plugin/manager.js             ← plugin install/remove
   prebuild/
-    runner.js                   ← plugin pipeline orchestrator
-    config.js                   ← config loader
-    html.js                     ← HTML file utilities
-    plugins/                    ← 26 built-in plugins
-__tests__/                      ← bun:test unit tests
+    plugins/                    ← 34 built-in plugins
+      identify-islands.js       ← NEW: Islands detection
+      compile-templates-to-js.js ← NEW: Template compiler
+      fingerprint-assets.js     ← NEW: Content hashing
+      generate-service-worker.js ← NEW: SW generator
+      ...
 ```
-
-**Zero production dependencies** (except `linkedom` for HTML parsing). Everything else uses Bun built-ins.
 
 ---
 
 ## Ecosystem
 
-### Bun Edition (this fork)
-
-| Tool | Description |
-|------|-------------|
-| [`@dieison-depra/nojs-bun`](https://github.com/dieison-depra/nojs-bun) | No.JS framework — Bun-native port ⭐ recommended pairing |
-| **`@dieison-depra/nojs-cli-bun`** | This package — Bun-native CLI |
-
-### Original (Node.js)
-
-| Tool | Description |
-|------|-------------|
-| [No.JS](https://github.com/ErickXavier/no-js) | The HTML-first reactive framework (original) |
-| [NoJS-CLI](https://github.com/ErickXavier/NoJS-CLI) | Original Node.js CLI (upstream of this fork) |
-| [NoJS-LSP](https://github.com/ErickXavier/nojs-lsp) | VS Code extension — autocomplete, hover docs, diagnostics |
-| [NoJS-MCP](https://github.com/ErickXavier/nojs-mcp) | MCP server — AI tools for building No.JS apps |
+- [`@dieison-depra/nojs-bun`](https://github.com/dieison-depra/nojs-bun) — The Bun-native framework port.
+- [`@dieison-depra/nojs-cli-bun`](https://github.com/dieison-depra/nojs-cli-bun) — This CLI edition.
 
 ---
-
-## Contributing
-
-Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a PR.
-
-- [Changelog](CHANGELOG.md)
-- [Security Policy](SECURITY.md)
 
 ## License
 
 [MIT](LICENSE) © Erick Xavier
-
----
-
-<p align="center">
-  <strong>NoJS CLI — Bun Edition</strong> — The Bun-native command-line companion for No.JS<br>
-  Fork of <a href="https://github.com/ErickXavier/NoJS-CLI">ErickXavier/NoJS-CLI</a> · <code>MIT License</code>
-</p>
