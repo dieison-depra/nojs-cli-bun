@@ -10,6 +10,7 @@ import generateImportMap from "./generate-import-map.js";
 import generatePwaManifest from "./generate-pwa-manifest.js";
 import generateResponsiveImages from "./generate-responsive-images.js";
 import generateSitemap from "./generate-sitemap.js";
+import generateServiceWorker from "./generate-service-worker.js";
 import hoistStaticContent from "./hoist-static-content.js";
 import injectCanonicalUrl from "./inject-canonical-url.js";
 import injectCspHashes from "./inject-csp-hashes.js";
@@ -43,6 +44,7 @@ export const builtinPlugins = {
 	[injectSpeculationRules.name]: injectSpeculationRules,
 	[injectOgTwitter.name]: injectOgTwitter,
 	[generateSitemap.name]: generateSitemap,
+	[generateServiceWorker.name]: generateServiceWorker,
 	[generateBundleReport.name]: generateBundleReport,
 	[generateEarlyHints.name]: generateEarlyHints,
 	[generateImportMap.name]: generateImportMap,
