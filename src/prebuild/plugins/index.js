@@ -2,6 +2,7 @@ import auditAccessibility from "./audit-accessibility.js";
 import auditMetaTags from "./audit-meta-tags.js";
 import compileTemplates from "./compile-templates.js";
 import enforceScriptLoading from "./enforce-script-loading.js";
+import fingerprintAssets from "./fingerprint-assets.js";
 import generateBundleReport from "./generate-bundle-report.js";
 import generateDeployConfig from "./generate-deploy-config.js";
 import generateEarlyHints from "./generate-early-hints.js";
@@ -69,4 +70,5 @@ export const builtinPlugins = {
 	[compileTemplates.name]: compileTemplates,
 	[hoistStaticContent.name]: hoistStaticContent,
 	[normalizeDirectives.name]: normalizeDirectives,
+	[fingerprintAssets.name]: fingerprintAssets,
 };
