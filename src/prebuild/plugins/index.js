@@ -13,6 +13,7 @@ import generateResponsiveImages from "./generate-responsive-images.js";
 import generateSitemap from "./generate-sitemap.js";
 import generateServiceWorker from "./generate-service-worker.js";
 import hoistStaticContent from "./hoist-static-content.js";
+import identifyIslands from "./identify-islands.js";
 import injectCanonicalUrl from "./inject-canonical-url.js";
 import injectCspHashes from "./inject-csp-hashes.js";
 import injectEventDelegation from "./inject-event-delegation.js";
@@ -74,6 +75,7 @@ export const builtinPlugins = {
 	[injectEventDelegation.name]: injectEventDelegation,
 	[compileTemplates.name]: compileTemplates,
 	[differentialServing.name]: differentialServing,
+	[identifyIslands.name]: identifyIslands,
 	[hoistStaticContent.name]: hoistStaticContent,
 	[normalizeDirectives.name]: normalizeDirectives,
 	[optimizeImages.name]: optimizeImages,
