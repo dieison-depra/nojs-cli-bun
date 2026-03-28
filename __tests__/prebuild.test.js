@@ -100,7 +100,7 @@ describe("inject-resource-hints", () => {
 	});
 });
 
-describe("inject-resource-hints — B3/B4 extensions", () => {
+describe("inject-i18n-preload", () => {
 	it("B3: injects locale preload for non-English lang attribute", async () => {
 		await writeTestHtml(
 			"index.html",
@@ -108,7 +108,7 @@ describe("inject-resource-hints — B3/B4 extensions", () => {
 		);
 		await prebuild({
 			cwd: testDir,
-			plugins: { "inject-resource-hints": true },
+			plugins: { "inject-i18n-preload": true },
 		});
 		const html = await readTestHtml("index.html");
 		expect(html).toContain('rel="preload"');
@@ -123,7 +123,7 @@ describe("inject-resource-hints — B3/B4 extensions", () => {
 		);
 		await prebuild({
 			cwd: testDir,
-			plugins: { "inject-resource-hints": true },
+			plugins: { "inject-i18n-preload": true },
 		});
 		const html = await readTestHtml("index.html");
 		expect(html).not.toContain("/locales/");
@@ -136,7 +136,7 @@ describe("inject-resource-hints — B3/B4 extensions", () => {
 		);
 		await prebuild({
 			cwd: testDir,
-			plugins: { "inject-resource-hints": true },
+			plugins: { "inject-i18n-preload": true },
 		});
 		const html = await readTestHtml("index.html");
 		expect(html).not.toContain("/locales/");
@@ -149,13 +149,15 @@ describe("inject-resource-hints — B3/B4 extensions", () => {
 		);
 		await prebuild({
 			cwd: testDir,
-			plugins: { "inject-resource-hints": true },
+			plugins: { "inject-i18n-preload": true },
 		});
 		const html = await readTestHtml("index.html");
 		const count = (html.match(/\/locales\/pt-BR\.json/g) || []).length;
 		expect(count).toBe(1);
 	});
+});
 
+describe("inject-resource-hints — B4 extensions", () => {
 	it("B4: injects dns-prefetch when config.apiBase is set", async () => {
 		await writeTestHtml(
 			"index.html",

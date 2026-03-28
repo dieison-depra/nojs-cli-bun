@@ -76,5 +76,6 @@ export const builtinPlugins = {
 	[differentialServing.name]: differentialServing,
 	[hoistStaticContent.name]: hoistStaticContent,
 	[normalizeDirectives.name]: normalizeDirectives,
+	[optimizeImages.name]: optimizeImages,
 	[fingerprintAssets.name]: fingerprintAssets,
 };

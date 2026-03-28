@@ -11478,6 +11478,60 @@ var init_compile_templates = __esm(() => {
   };
 });
 
+// src/prebuild/plugins/differential-serving.js
+import { readFile as readFile2, writeFile as writeFile3 } from "fs/promises";
+import { join as join3, basename as basename2, extname } from "path";
+var differential_serving_default;
+var init_differential_serving = __esm(() => {
+  init_esm9();
+  differential_serving_default = {
+    name: "differential-serving",
+    description: "Generate modern and legacy bundles and update HTML to use module/nomodule pattern",
+    async finalize({ outputDir, processedFiles }) {
+      for (const htmlPath of processedFiles) {
+        let html = await readFile2(htmlPath, "utf-8");
+        const { document: doc } = parseHTML(html);
+        const scripts = doc.querySelectorAll("script[src]");
+        let changed = false;
+        for (const script of scripts) {
+          const src = script.getAttribute("src");
+          if (!src || src.startsWith("http") || src.startsWith("//"))
+            continue;
+          if (script.getAttribute("type") === "module" || script.hasAttribute("nomodule"))
+            continue;
+          const ext = extname(src);
+          const base = src.slice(0, -ext.length);
+          const legacySrc = `${base}.legacy${ext}`;
+          const inputPath = join3(outputDir, src);
+          const outputPath = join3(outputDir, legacySrc);
+          try {
+            await Bun.build({
+              entrypoints: [inputPath],
+              outdir: outputDir,
+              naming: "[dir]/[name].legacy.[ext]",
+              minify: true,
+              target: "browser"
+            });
+            script.setAttribute("type", "module");
+            const nomoduleScript = doc.createElement("script");
+            nomoduleScript.setAttribute("src", legacySrc);
+            nomoduleScript.setAttribute("nomodule", "");
+            nomoduleScript.setAttribute("defer", "");
+            script.parentNode.insertBefore(nomoduleScript, script.nextSibling);
+            changed = true;
+          } catch (err) {
+            console.error(`[differential-serving] Failed to build legacy bundle for ${src}:`, err);
+          }
+        }
+        if (changed) {
+          await writeFile3(htmlPath, doc.toString(), "utf-8");
+        }
+      }
+      console.log(`[differential-serving] Module/nomodule pattern applied to ${processedFiles.length} files`);
+    }
+  };
+});
+
 // src/prebuild/plugins/enforce-script-loading.js
 function isThirdParty(src) {
   return src.startsWith("http://") || src.startsWith("https://") || src.startsWith("//");
@@ -11517,15 +11571,235 @@ var init_enforce_script_loading = __esm(() => {
   };
 });
 
+// src/prebuild/plugins/fingerprint-assets.js
+import { readFile as readFile3, writeFile as writeFile4, rename, readdir } from "fs/promises";
+import { join as join4, dirname as dirname2, basename as basename3, extname as extname2, relative as relative2 } from "path";
+import { createHash as createHash2 } from "crypto";
+async function getFilesRecursively(dir) {
+  const entries2 = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(entries2.map((res) => {
+    const resPath = join4(dir, res.name);
+    return res.isDirectory() ? getFilesRecursively(resPath) : resPath;
+  }));
+  return files.flat();
+}
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+var fingerprint_assets_default;
+var init_fingerprint_assets = __esm(() => {
+  fingerprint_assets_default = {
+    name: "fingerprint-assets",
+    description: "Add content hashes to JS and CSS files for cache busting and update HTML references",
+    async finalize({ outputDir, processedFiles }) {
+      const allFiles = await getFilesRecursively(outputDir);
+      const assets = allFiles.filter((f) => (f.endsWith(".js") || f.endsWith(".mjs") || f.endsWith(".css")) && !f.includes(".bundle-report.html"));
+      const map = new Map;
+      for (const assetPath of assets) {
+        const content = await readFile3(assetPath);
+        const hash = createHash2("sha1").update(content).digest("hex").slice(0, 8);
+        const ext = extname2(assetPath);
+        const base = basename3(assetPath, ext);
+        const dir = dirname2(assetPath);
+        if (base.match(/\.[a-f0-9]{8}$/))
+          continue;
+        const newBase = `${base}.${hash}${ext}`;
+        const newPath = join4(dir, newBase);
+        await rename(assetPath, newPath);
+        const oldName = basename3(assetPath);
+        const newName = newBase;
+        map.set(oldName, newName);
+      }
+      if (map.size === 0)
+        return;
+      for (const htmlPath of processedFiles) {
+        let html = await readFile3(htmlPath, "utf-8");
+        let changed = false;
+        for (const [oldName, newName] of map) {
+          const re = new RegExp(`(["'\\/])${escapeRegExp(oldName)}(?=["'\\?#])`, "g");
+          const updated = html.replace(re, `$1${newName}`);
+          if (updated !== html) {
+            html = updated;
+            changed = true;
+          }
+        }
+        if (changed) {
+          await writeFile4(htmlPath, html, "utf-8");
+        }
+      }
+      const headersPath = join4(outputDir, "_headers");
+      try {
+        let headers = await readFile3(headersPath, "utf-8");
+        let changed = false;
+        for (const [oldName, newName] of map) {
+          const re = new RegExp(`(\\/|<)${escapeRegExp(oldName)}(?=[\\s>])`, "g");
+          const updated = headers.replace(re, `$1${newName}`);
+          if (updated !== headers) {
+            headers = updated;
+            changed = true;
+          }
+        }
+        if (changed) {
+          await writeFile4(headersPath, headers, "utf-8");
+        }
+      } catch {}
+      console.log(`[fingerprint-assets] Fingerprinted ${map.size} assets`);
+    }
+  };
+});
+
+// src/prebuild/plugins/generate-bundle-report.js
+import { writeFile as writeFile5, readdir as readdir2, stat } from "fs/promises";
+import { join as join5, relative as relative3 } from "path";
+async function getFilesRecursively2(dir) {
+  const entries2 = await readdir2(dir, { withFileTypes: true });
+  const files = await Promise.all(entries2.map((res) => {
+    const resPath = join5(dir, res.name);
+    return res.isDirectory() ? getFilesRecursively2(resPath) : resPath;
+  }));
+  return files.flat();
+}
+function getFileType(f) {
+  if (f.endsWith(".js") || f.endsWith(".mjs"))
+    return "JS";
+  if (f.endsWith(".css"))
+    return "CSS";
+  if (f.endsWith(".html"))
+    return "HTML";
+  return "Other";
+}
+function formatBytes(bytes) {
+  if (bytes === 0)
+    return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
+}
+function generateHtml(data, totalSize) {
+  const rows = data.map((d) => `
+        <tr>
+            <td>${d.path}</td>
+            <td><span class="badge ${d.type.toLowerCase()}">${d.type}</span></td>
+            <td>${formatBytes(d.size)}</td>
+            <td>${(d.size / (totalSize || 1) * 100).toFixed(2)}%</td>
+        </tr>
+    `).join("");
+  const blocks = data.filter((d) => d.size > 0).map((d) => `
+        <div class="block ${d.type.toLowerCase()}" style="flex-grow: ${d.size}; flex-basis: ${d.size / (totalSize || 1) * 100}%;" title="${d.path}: ${formatBytes(d.size)}">
+            <span class="label">${d.path.split("/").pop()}</span>
+        </div>
+    `).join("");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No.JS Bundle Analysis Report</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; color: #1a1a1a; line-height: 1.5; background: #fdfdfd; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 0.5rem; margin-top: 0; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card h2 { margin: 0; font-size: 0.875rem; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card p { margin: 0.5rem 0 0; font-size: 1.5rem; font-weight: bold; }
+        
+        .treemap { display: flex; flex-wrap: wrap; gap: 4px; height: 120px; margin-bottom: 2rem; border-radius: 8px; overflow: hidden; background: #eee; }
+        .block { display: flex; align-items: center; justify-content: center; overflow: hidden; color: white; padding: 4px; text-align: center; transition: opacity 0.2s; cursor: help; }
+        .block:hover { opacity: 0.9; }
+        .block.js { background: #f7df1e; color: black; }
+        .block.css { background: #264de4; }
+        .block.html { background: #e34c26; }
+        .block.other { background: #666; }
+        .label { font-size: 10px; font-weight: bold; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; padding: 0 4px; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #eee; }
+        th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; font-size: 0.875rem; color: #666; }
+        tr:last-child td { border-bottom: none; }
+        
+        .badge { font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .badge.js { background: #fef9c3; color: #854d0e; }
+        .badge.css { background: #dbeafe; color: #1e40af; }
+        .badge.html { background: #fee2e2; color: #991b1b; }
+        .badge.other { background: #f3f4f6; color: #374151; }
+        
+        @media (max-width: 600px) {
+            body { padding: 1rem; }
+            .summary { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>No.JS Bundle Analysis</h1>
+    
+    <div class="summary">
+        <div class="card">
+            <h2>Total Size</h2>
+            <p>${formatBytes(totalSize)}</p>
+        </div>
+        <div class="card">
+            <h2>Total Files</h2>
+            <p>${data.length}</p>
+        </div>
+    </div>
+
+    <div class="treemap">
+        ${blocks}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File Path</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Proportion</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rows}
+        </tbody>
+    </table>
+</body>
+</html>`;
+}
+var generate_bundle_report_default;
+var init_generate_bundle_report = __esm(() => {
+  generate_bundle_report_default = {
+    name: "generate-bundle-report",
+    description: "Generate a visual report of the bundle composition and sizes (HTML report)",
+    async finalize({ outputDir }) {
+      const files = await getFilesRecursively2(outputDir);
+      const targetFiles = files.filter((f) => f.endsWith(".js") || f.endsWith(".mjs") || f.endsWith(".css") || f.endsWith(".html"));
+      const data = [];
+      for (const f of targetFiles) {
+        const s = await stat(f);
+        data.push({
+          path: relative3(outputDir, f),
+          size: s.size,
+          type: getFileType(f)
+        });
+      }
+      data.sort((a, b) => b.size - a.size);
+      const totalSize = data.reduce((acc, d) => acc + d.size, 0);
+      const reportHtml = generateHtml(data, totalSize);
+      const reportPath = join5(outputDir, "nojs-bundle-report.html");
+      await writeFile5(reportPath, reportHtml, "utf-8");
+      console.log(`[generate-bundle-report] Report generated: ${reportPath}`);
+    }
+  };
+});
+
 // src/prebuild/plugins/generate-deploy-config.js
-import { writeFile as writeFile3 } from "fs/promises";
-import { join as join3 } from "path";
+import { writeFile as writeFile6 } from "fs/promises";
+import { join as join6 } from "path";
 async function writeNetlify(outputDir, base, useHashDetected) {
   const prefix = base === "/" ? "" : base;
   const content = `${prefix}/* ${prefix}/index.html 200
 `;
-  const dest = join3(outputDir, "_redirects");
-  await writeFile3(dest, content, "utf-8");
+  const dest = join6(outputDir, "_redirects");
+  await writeFile6(dest, content, "utf-8");
   const note = useHashDetected ? " (note: useHash mode detected \u2014 may not be needed)" : "";
   console.log(`[generate-deploy-config] ${dest}: Netlify SPA fallback written${note}`);
 }
@@ -11534,8 +11808,8 @@ async function writeVercel(outputDir, base, useHashDetected) {
   const destination = base === "/" ? "/index.html" : `${base}/index.html`;
   const content = JSON.stringify({ rewrites: [{ source, destination }] }, null, 2) + `
 `;
-  const dest = join3(outputDir, "vercel.json");
-  await writeFile3(dest, content, "utf-8");
+  const dest = join6(outputDir, "vercel.json");
+  await writeFile6(dest, content, "utf-8");
   const note = useHashDetected ? " (note: useHash mode detected \u2014 may not be needed)" : "";
   console.log(`[generate-deploy-config] ${dest}: Vercel SPA fallback written${note}`);
 }
@@ -11553,8 +11827,8 @@ async function writeApache(outputDir, base, useHashDetected) {
     ""
   ].join(`
 `);
-  const dest = join3(outputDir, ".htaccess");
-  await writeFile3(dest, content, "utf-8");
+  const dest = join6(outputDir, ".htaccess");
+  await writeFile6(dest, content, "utf-8");
   const note = useHashDetected ? " (note: useHash mode detected \u2014 may not be needed)" : "";
   console.log(`[generate-deploy-config] ${dest}: Apache SPA fallback written${note}`);
 }
@@ -11568,8 +11842,8 @@ async function writeNginx(outputDir, base, useHashDetected) {
     ""
   ].join(`
 `);
-  const dest = join3(outputDir, "nginx.conf");
-  await writeFile3(dest, content, "utf-8");
+  const dest = join6(outputDir, "nginx.conf");
+  await writeFile6(dest, content, "utf-8");
   const note = useHashDetected ? " (note: useHash mode detected \u2014 may not be needed)" : "";
   console.log(`[generate-deploy-config] ${dest}: nginx SPA fallback written${note}`);
 }
@@ -11620,9 +11894,147 @@ var init_generate_deploy_config = __esm(() => {
   };
 });
 
+// src/prebuild/plugins/generate-early-hints.js
+import { writeFile as writeFile7 } from "fs/promises";
+import { join as join7, relative as relative4 } from "path";
+function getPublicPath(outputPath, outputDir) {
+  let rel = "/" + relative4(outputDir, outputPath).replace(/\\/g, "/");
+  if (rel === "/index.html")
+    return "/";
+  if (rel.endsWith("/index.html"))
+    return rel.slice(0, -10);
+  return rel;
+}
+async function extractHintsFromOutputFile(path) {
+  const { readFile: readFile4 } = await import("fs/promises");
+  const html = await readFile4(path, "utf-8");
+  const { document: doc } = parseHTML(html);
+  const hints = new Set;
+  for (const script of doc.querySelectorAll("script[src]")) {
+    const src = script.getAttribute("src");
+    if (src && !src.startsWith("http") && !src.startsWith("//")) {
+      hints.add(`Link: <${src}>; rel=preload; as=script`);
+    }
+  }
+  for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+    const href = link.getAttribute("href");
+    if (href && !href.startsWith("http") && !href.startsWith("//")) {
+      hints.add(`Link: <${href}>; rel=preload; as=style`);
+    }
+  }
+  for (const link of doc.querySelectorAll('link[rel="preload"]')) {
+    const href = link.getAttribute("href");
+    const as = link.getAttribute("as");
+    if (href && !href.startsWith("http") && !href.startsWith("//")) {
+      hints.add(`Link: <${href}>; rel=preload${as ? `; as=${as}` : ""}`);
+    }
+  }
+  return hints;
+}
+var generate_early_hints_default;
+var init_generate_early_hints = __esm(() => {
+  init_esm9();
+  generate_early_hints_default = {
+    name: "generate-early-hints",
+    description: "Generate server push/early hints configuration (e.g., _headers for Netlify/Cloudflare)",
+    _hints: new Map,
+    async process(html, { filePath }) {
+      const { document: doc } = parseHTML(html);
+      const hints = new Set;
+      for (const script of doc.querySelectorAll("script[src]")) {
+        const src = script.getAttribute("src");
+        if (src && !src.startsWith("http") && !src.startsWith("//")) {
+          hints.add(`Link: <${src}>; rel=preload; as=script`);
+        }
+      }
+      for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+        const href = link.getAttribute("href");
+        if (href && !href.startsWith("http") && !href.startsWith("//")) {
+          hints.add(`Link: <${href}>; rel=preload; as=style`);
+        }
+      }
+      for (const link of doc.querySelectorAll('link[rel="preload"]')) {
+        const href = link.getAttribute("href");
+        const as = link.getAttribute("as");
+        if (href && !href.startsWith("http") && !href.startsWith("//")) {
+          hints.add(`Link: <${href}>; rel=preload${as ? `; as=${as}` : ""}`);
+        }
+      }
+      if (hints.size > 0) {
+        this._hints.set(filePath, hints);
+      }
+      return html;
+    },
+    async finalize({ outputDir, config, processedFiles }) {
+      const target = config.target || "netlify";
+      if (target !== "netlify" && target !== "cloudflare") {
+        console.warn(`[generate-early-hints] Unsupported target: ${target}`);
+        return;
+      }
+      let content = "";
+      for (const outputPath of processedFiles) {
+        const publicPath = getPublicPath(outputPath, outputDir);
+        const hints = await extractHintsFromOutputFile(outputPath);
+        if (hints.size > 0) {
+          content += `${publicPath}
+`;
+          for (const hint of hints) {
+            content += `  ${hint}
+`;
+          }
+          content += `
+`;
+        }
+      }
+      if (content) {
+        const dest = join7(outputDir, "_headers");
+        await writeFile7(dest, content, "utf-8");
+        console.log(`[generate-early-hints] ${dest}: Early hints written for ${target}`);
+      }
+      this._hints.clear();
+    }
+  };
+});
+
+// src/prebuild/plugins/generate-import-map.js
+var generate_import_map_default;
+var init_generate_import_map = __esm(() => {
+  init_esm9();
+  generate_import_map_default = {
+    name: "generate-import-map",
+    description: "Generate and inject an import map for bare specifiers (e.g., 'nojs')",
+    async process(html, { config }) {
+      const { document: doc } = parseHTML(html);
+      const head = doc.head;
+      if (!head)
+        return html;
+      if (doc.querySelector('script[type="importmap"]'))
+        return html;
+      const userImports = config.importMap?.imports || {};
+      const imports = {
+        nojs: "/nojs.bundle.js",
+        ...userImports
+      };
+      const importMap = { imports };
+      const script = doc.createElement("script");
+      script.setAttribute("type", "importmap");
+      script.textContent = `
+${JSON.stringify(importMap, null, 2)}
+`;
+      const firstModule = head.querySelector('script[type="module"]');
+      if (firstModule) {
+        head.insertBefore(script, firstModule);
+      } else {
+        head.appendChild(script);
+      }
+      return doc.toString();
+    }
+  };
+});
+
 // src/prebuild/plugins/generate-pwa-manifest.js
-import { writeFile as writeFile4 } from "fs/promises";
-import { join as join4 } from "path";
+import { writeFile as writeFile8 } from "fs/promises";
+import { join as join8 } from "path";
 var generate_pwa_manifest_default;
 var init_generate_pwa_manifest = __esm(() => {
   init_esm9();
@@ -11654,21 +12066,21 @@ var init_generate_pwa_manifest = __esm(() => {
         start_url: opts.startUrl || "/",
         icons: opts.icons || []
       };
-      const dest = join4(outputDir, "manifest.webmanifest");
-      await writeFile4(dest, JSON.stringify(manifest, null, 2), "utf-8");
+      const dest = join8(outputDir, "manifest.webmanifest");
+      await writeFile8(dest, JSON.stringify(manifest, null, 2), "utf-8");
     }
   };
 });
 
 // src/prebuild/plugins/generate-responsive-images.js
-import { basename as basename2, dirname as dirname2, extname } from "path";
+import { basename as basename4, dirname as dirname3, extname as extname3 } from "path";
 function isLocalPath(src) {
   return src && !src.startsWith("http://") && !src.startsWith("https://") && !src.startsWith("data:");
 }
 function buildVariantPath(src, width, format) {
-  const ext = extname(src);
-  const base = basename2(src, ext);
-  const dir = dirname2(src);
+  const ext = extname3(src);
+  const base = basename4(src, ext);
+  const dir = dirname3(src);
   const prefix = dir === "." ? "" : `${dir}/`;
   return `${prefix}${base}-${width}w.${format}`;
 }
@@ -11706,7 +12118,7 @@ var init_generate_responsive_images = __esm(() => {
         const src = img.getAttribute("src");
         if (!isLocalPath(src))
           continue;
-        const ext = extname(src).toLowerCase();
+        const ext = extname3(src).toLowerCase();
         if (!SUPPORTED_EXTS.has(ext))
           continue;
         const picture = doc.createElement("picture");
@@ -11735,8 +12147,8 @@ var init_generate_responsive_images = __esm(() => {
 
 // src/prebuild/plugins/generate-sitemap.js
 import { readFileSync, writeFileSync, existsSync as existsSync2 } from "fs";
-import { writeFile as writeFile5 } from "fs/promises";
-import { join as join5 } from "path";
+import { writeFile as writeFile9 } from "fs/promises";
+import { join as join9 } from "path";
 function isIndexable(route) {
   if (route === "*")
     return false;
@@ -11807,11 +12219,11 @@ ${urls.join(`
 `)}
 </urlset>
 `;
-      const dest = join5(outputDir, "sitemap.xml");
-      await writeFile5(dest, xml, "utf-8");
+      const dest = join9(outputDir, "sitemap.xml");
+      await writeFile9(dest, xml, "utf-8");
       console.log(`[generate-sitemap] Written ${routes.size} URL(s) to ${dest}`);
       const sitemapUrl = `${baseUrl}/sitemap.xml`;
-      const robotsPath = join5(outputDir, "robots.txt");
+      const robotsPath = join9(outputDir, "robots.txt");
       if (existsSync2(robotsPath)) {
         const existing = readFileSync(robotsPath, "utf-8");
         if (!existing.includes(`Sitemap: ${sitemapUrl}`)) {
@@ -11826,6 +12238,87 @@ Sitemap: ${sitemapUrl}
 `, "utf-8");
       }
       this._routes = null;
+    }
+  };
+});
+
+// src/prebuild/plugins/generate-service-worker.js
+import { writeFile as writeFile10, readdir as readdir3, stat as stat2 } from "fs/promises";
+import { join as join10, relative as relative5 } from "path";
+async function getFilesRecursively3(dir) {
+  const entries2 = await readdir3(dir, { withFileTypes: true });
+  const files = await Promise.all(entries2.map((res) => {
+    const resPath = join10(dir, res.name);
+    return res.isDirectory() ? getFilesRecursively3(resPath) : resPath;
+  }));
+  return files.flat();
+}
+var generate_service_worker_default;
+var init_generate_service_worker = __esm(() => {
+  init_esm9();
+  generate_service_worker_default = {
+    name: "generate-service-worker",
+    description: "Generate a Service Worker for precaching assets and offline support",
+    async process(html) {
+      const { document: doc } = parseHTML(html);
+      const body = doc.body;
+      if (!body)
+        return html;
+      if (doc.querySelector('script[data-nojs="sw-register"]'))
+        return html;
+      const script = doc.createElement("script");
+      script.setAttribute("data-nojs", "sw-register");
+      script.textContent = `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.error('SW registration failed: ', err);
+    });
+  });
+}
+`.trim();
+      body.appendChild(script);
+      return doc.toString();
+    },
+    async finalize({ outputDir, config }) {
+      const allFiles = await getFilesRecursively3(outputDir);
+      const swName = config.swName || "sw.js";
+      const cacheName = config.cacheName || `nojs-cache-${Date.now()}`;
+      const assetsToCache = allFiles.map((f) => "/" + relative5(outputDir, f).replace(/\\/g, "/")).filter((f) => {
+        const skip = [swName, "_headers", "_redirects", "nojs-bundle-report.html"];
+        return !skip.some((s) => f.endsWith(s));
+      });
+      if (!assetsToCache.includes("/"))
+        assetsToCache.push("/");
+      const swContent = `
+const CACHE_NAME = '${cacheName}';
+const ASSETS = ${JSON.stringify(assetsToCache, null, 2)};
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    ))
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
+`.trim();
+      const dest = join10(outputDir, swName);
+      await writeFile10(dest, swContent, "utf-8");
+      console.log(`[generate-service-worker] ${dest}: Service Worker generated with ${assetsToCache.length} assets`);
     }
   };
 });
@@ -11954,7 +12447,7 @@ var init_hoist_static_content = __esm(() => {
 });
 
 // src/prebuild/plugins/inject-canonical-url.js
-import { relative as relative2 } from "path";
+import { relative as relative6 } from "path";
 var inject_canonical_url_default;
 var init_inject_canonical_url = __esm(() => {
   init_esm9();
@@ -11972,7 +12465,7 @@ var init_inject_canonical_url = __esm(() => {
       if (head.querySelector('link[rel="canonical"]'))
         return html;
       const cwd = config?.cwd || process.cwd();
-      const rel = filePath ? relative2(cwd, filePath) : "index.html";
+      const rel = filePath ? relative6(cwd, filePath) : "index.html";
       const parts = rel.replace(/\\/g, "/").split("/");
       let urlPath;
       if (parts[parts.length - 1] === "index.html") {
@@ -11991,9 +12484,9 @@ var init_inject_canonical_url = __esm(() => {
 });
 
 // src/prebuild/plugins/inject-csp-hashes.js
-import { createHash as createHash2 } from "crypto";
+import { createHash as createHash3 } from "crypto";
 function sha384(content) {
-  const hash = createHash2("sha384").update(content, "utf8").digest("base64");
+  const hash = createHash3("sha384").update(content, "utf8").digest("base64");
   return `'sha384-${hash}'`;
 }
 var inject_csp_hashes_default;
@@ -12224,6 +12717,43 @@ var init_inject_head_attrs = __esm(() => {
   };
 });
 
+// src/prebuild/plugins/inject-i18n-preload.js
+function isEnglishLocale(lang) {
+  return lang === "en" || lang.startsWith("en-");
+}
+function isValidLocaleCode(lang) {
+  return /^[a-z]{2}$/.test(lang) || /^[a-z]{2}-[A-Z]{2}$/.test(lang);
+}
+var inject_i18n_preload_default;
+var init_inject_i18n_preload = __esm(() => {
+  init_esm9();
+  inject_i18n_preload_default = {
+    name: "inject-i18n-preload",
+    description: "Inject <link rel='preload'> for the default language locale file",
+    async process(html, { config }) {
+      const { document: doc } = parseHTML(html);
+      const head = doc.head;
+      if (!head)
+        return html;
+      const lang = doc.documentElement?.getAttribute("lang") || "";
+      if (!lang || isEnglishLocale(lang) || !isValidLocaleCode(lang))
+        return html;
+      const localesDir = config.localesDir || "/locales/";
+      const localeHref = `${localesDir.endsWith("/") ? localesDir : localesDir + "/"}${lang}.json`;
+      const existingPreload = head.querySelector(`link[rel="preload"][href="${localeHref}"]`);
+      if (existingPreload)
+        return html;
+      const link = doc.createElement("link");
+      link.setAttribute("rel", "preload");
+      link.setAttribute("as", "fetch");
+      link.setAttribute("href", localeHref);
+      link.setAttribute("crossorigin", "anonymous");
+      head.appendChild(link);
+      return doc.toString();
+    }
+  };
+});
+
 // src/prebuild/plugins/inject-jsonld.js
 var inject_jsonld_default;
 var init_inject_jsonld = __esm(() => {
@@ -12375,12 +12905,6 @@ var init_inject_og_twitter = __esm(() => {
 function isInterpolated2(url) {
   return /\{[^}]+\}/.test(url);
 }
-function isEnglishLocale(lang) {
-  return lang === "en" || lang.startsWith("en-");
-}
-function isValidLocaleCode(lang) {
-  return /^[a-z]{2}$/.test(lang) || /^[a-z]{2}-[A-Z]{2}$/.test(lang);
-}
 function isCrossOrigin2(url) {
   try {
     new URL(url);
@@ -12435,19 +12959,6 @@ var init_inject_resource_hints = __esm(() => {
           continue;
         appendLink(doc, head, "prefetch", src, "fetch");
         existingHrefs.add(src);
-      }
-      const lang = doc.documentElement?.getAttribute("lang") || "";
-      if (lang && !isEnglishLocale(lang) && isValidLocaleCode(lang)) {
-        const localeHref = `/locales/${lang}.json`;
-        if (!existingHrefs.has(localeHref)) {
-          const link = doc.createElement("link");
-          link.setAttribute("rel", "preload");
-          link.setAttribute("as", "fetch");
-          link.setAttribute("href", localeHref);
-          link.setAttribute("crossorigin", "anonymous");
-          head.appendChild(link);
-          existingHrefs.add(localeHref);
-        }
       }
       if (config.apiBase) {
         try {
@@ -12506,7 +13017,7 @@ var init_inject_speculation_rules = __esm(() => {
 });
 
 // src/prebuild/plugins/inject-sri-hashes.js
-import { createHash as createHash3 } from "crypto";
+import { createHash as createHash4 } from "crypto";
 function isInterpolated3(url) {
   return /\{[^}]+\}/.test(url);
 }
@@ -12518,7 +13029,7 @@ async function fetchAndHash(url, timeout) {
     if (!res.ok)
       return null;
     const buf = await res.arrayBuffer();
-    return createHash3("sha384").update(Buffer.from(buf)).digest("base64");
+    return createHash4("sha384").update(Buffer.from(buf)).digest("base64");
   } catch {
     return null;
   } finally {
@@ -12831,8 +13342,8 @@ var init_inline_critical_css = __esm(() => {
 });
 
 // src/prebuild/plugins/inline-svg.js
-import { readFile as readFile2, stat } from "fs/promises";
-import { join as join6, resolve as resolve4 } from "path";
+import { readFile as readFile4, stat as stat3 } from "fs/promises";
+import { join as join11, resolve as resolve4 } from "path";
 var inline_svg_default;
 var init_inline_svg = __esm(() => {
   inline_svg_default = {
@@ -12855,10 +13366,10 @@ var init_inline_svg = __esm(() => {
           continue;
         if (/data-no-inline/.test(attrs))
           continue;
-        const absPath = src.startsWith("/") ? join6(cwd, src) : resolve4(cwd, src);
+        const absPath = src.startsWith("/") ? join11(cwd, src) : resolve4(cwd, src);
         let fileSize;
         try {
-          fileSize = (await stat(absPath)).size;
+          fileSize = (await stat3(absPath)).size;
         } catch {
           continue;
         }
@@ -12866,7 +13377,7 @@ var init_inline_svg = __esm(() => {
           continue;
         let svgContent;
         try {
-          svgContent = await readFile2(absPath, "utf-8");
+          svgContent = await readFile4(absPath, "utf-8");
         } catch {
           continue;
         }
@@ -13107,23 +13618,23 @@ var init_optimize_images = __esm(() => {
 });
 
 // src/prebuild/plugins/precompress-assets.js
-import { readdir, readFile as readFile3, writeFile as writeFile6 } from "fs/promises";
-import { extname as extname2, join as join7 } from "path";
+import { readdir as readdir4, readFile as readFile5, writeFile as writeFile11 } from "fs/promises";
+import { extname as extname4, join as join12 } from "path";
 import { promisify } from "util";
 import { brotliCompress, gzip } from "zlib";
 async function collectFiles(dir, extensions) {
   const results = [];
   let entries2;
   try {
-    entries2 = await readdir(dir, { withFileTypes: true });
+    entries2 = await readdir4(dir, { withFileTypes: true });
   } catch {
     return results;
   }
   for (const entry of entries2) {
-    const full = join7(dir, entry.name);
+    const full = join12(dir, entry.name);
     if (entry.isDirectory()) {
       results.push(...await collectFiles(full, extensions));
-    } else if (entry.isFile() && extensions.has(extname2(entry.name))) {
+    } else if (entry.isFile() && extensions.has(extname4(entry.name))) {
       if (!entry.name.endsWith(".br") && !entry.name.endsWith(".gz")) {
         results.push(full);
       }
@@ -13160,13 +13671,13 @@ var init_precompress_assets = __esm(() => {
         return;
       const files = await collectFiles(outputDir, extensions);
       await Promise.all(files.map(async (filePath) => {
-        const content = await readFile3(filePath);
+        const content = await readFile5(filePath);
         const tasks = [];
         if (doBrotli) {
-          tasks.push(brotliCompressAsync(content).then((buf) => writeFile6(`${filePath}.br`, buf)));
+          tasks.push(brotliCompressAsync(content).then((buf) => writeFile11(`${filePath}.br`, buf)));
         }
         if (doGzip) {
-          tasks.push(gzipAsync(content).then((buf) => writeFile6(`${filePath}.gz`, buf)));
+          tasks.push(gzipAsync(content).then((buf) => writeFile11(`${filePath}.gz`, buf)));
         }
         await Promise.all(tasks);
       }));
@@ -13272,30 +13783,30 @@ var init_purge_unused_css = __esm(() => {
 });
 
 // src/prebuild/plugins/tree-shake-framework.js
-import { writeFile as writeFile7, unlink, readFile as readFile4, access, rename } from "fs/promises";
-import { join as join8, dirname as dirname3, resolve as resolve5 } from "path";
+import { writeFile as writeFile12, unlink, readFile as readFile6, access, rename as rename2 } from "fs/promises";
+import { join as join13, dirname as dirname4, resolve as resolve5 } from "path";
 function stripUnusedImports(src, keep, frameworkSrc) {
   return src.replace(/^import "\.\/([^"]+)";\n/gm, (match, modPath) => {
     if (SIDE_EFFECT_MODULES.has(modPath) && !keep.has(modPath))
       return "";
-    return `import "${join8(frameworkSrc, modPath)}";
+    return `import "${join13(frameworkSrc, modPath)}";
 `;
   }).replace(/^(import\s+.*?from\s+)"\.\/([^"]+)"/gm, (match, prefix, modPath) => {
-    return `${prefix}"${join8(frameworkSrc, modPath)}"`;
+    return `${prefix}"${join13(frameworkSrc, modPath)}"`;
   });
 }
 async function findFrameworkSrc(outputDir, config) {
   if (config.frameworkSrc) {
     const p = resolve5(config.frameworkSrc);
-    if (await pathExists(join8(p, "index.js")))
+    if (await pathExists(join13(p, "index.js")))
       return p;
   }
   let dir = outputDir;
   for (let i = 0;i < 8; i++) {
-    const candidate = join8(dir, "node_modules", "@erickxavier", "no-js", "src");
-    if (await pathExists(join8(candidate, "index.js")))
+    const candidate = join13(dir, "node_modules", "@erickxavier", "no-js", "src");
+    if (await pathExists(join13(candidate, "index.js")))
       return candidate;
-    const parent = dirname3(dir);
+    const parent = dirname4(dir);
     if (parent === dir)
       break;
     dir = parent;
@@ -13416,11 +13927,11 @@ var init_tree_shake_framework = __esm(() => {
       }
       const keep = new Set(this._usedModules);
       const removed = [...SIDE_EFFECT_MODULES].filter((m) => !keep.has(m));
-      const indexContent = await readFile4(join8(frameworkSrc, "index.js"), "utf-8");
+      const indexContent = await readFile6(join13(frameworkSrc, "index.js"), "utf-8");
       const entry = stripUnusedImports(indexContent, keep, frameworkSrc);
-      const entryPath = join8(outputDir, ".nojs-tree-entry.tmp.js");
+      const entryPath = join13(outputDir, ".nojs-tree-entry.tmp.js");
       const bundleName = "nojs.bundle.js";
-      await writeFile7(entryPath, entry, "utf-8");
+      await writeFile12(entryPath, entry, "utf-8");
       try {
         const result = await Bun.build({
           entrypoints: [entryPath],
@@ -13435,20 +13946,20 @@ var init_tree_shake_framework = __esm(() => {
           return;
         }
         const builtPath = result.outputs[0]?.path;
-        if (builtPath && builtPath !== join8(outputDir, bundleName)) {
-          await rename(builtPath, join8(outputDir, bundleName));
+        if (builtPath && builtPath !== join13(outputDir, bundleName)) {
+          await rename2(builtPath, join13(outputDir, bundleName));
         }
         const srcEscaped = this._scriptSrc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const scriptRe = new RegExp(`(<script[^>]*\\ssrc=")${srcEscaped}"`, "g");
         for (const filePath of processedFiles) {
-          const html = await readFile4(filePath, "utf-8");
+          const html = await readFile6(filePath, "utf-8");
           const updated = html.replace(scriptRe, `$1${bundleName}"`);
           if (updated !== html)
-            await writeFile7(filePath, updated, "utf-8");
+            await writeFile12(filePath, updated, "utf-8");
         }
         const keptNames = [...keep].map((m) => m.replace("directives/", "").replace(".js", ""));
         const removedNames = removed.map((m) => m.replace("directives/", "").replace(".js", ""));
-        console.log(`[tree-shake-framework] ${join8(outputDir, bundleName)}: built` + `
+        console.log(`[tree-shake-framework] ${join13(outputDir, bundleName)}: built` + `
   kept:    ${keptNames.join(", ") || "(core only)"}` + `
   removed: ${removedNames.join(", ") || "none"}`);
       } finally {
@@ -13469,16 +13980,23 @@ var init_plugins = __esm(() => {
   init_audit_accessibility();
   init_audit_meta_tags();
   init_compile_templates();
+  init_differential_serving();
   init_enforce_script_loading();
+  init_fingerprint_assets();
+  init_generate_bundle_report();
   init_generate_deploy_config();
+  init_generate_early_hints();
+  init_generate_import_map();
   init_generate_pwa_manifest();
   init_generate_responsive_images();
   init_generate_sitemap();
+  init_generate_service_worker();
   init_hoist_static_content();
   init_inject_canonical_url();
   init_inject_csp_hashes();
   init_inject_event_delegation();
   init_inject_head_attrs();
+  init_inject_i18n_preload();
   init_inject_jsonld();
   init_inject_modulepreload();
   init_inject_og_twitter();
@@ -13501,11 +14019,15 @@ var init_plugins = __esm(() => {
   builtinPlugins = {
     [inject_resource_hints_default.name]: inject_resource_hints_default,
     [inject_head_attrs_default.name]: inject_head_attrs_default,
+    [inject_i18n_preload_default.name]: inject_i18n_preload_default,
     [inject_speculation_rules_default.name]: inject_speculation_rules_default,
     [inject_og_twitter_default.name]: inject_og_twitter_default,
     [generate_sitemap_default.name]: generate_sitemap_default,
+    [generate_service_worker_default.name]: generate_service_worker_default,
+    [generate_bundle_report_default.name]: generate_bundle_report_default,
+    [generate_early_hints_default.name]: generate_early_hints_default,
+    [generate_import_map_default.name]: generate_import_map_default,
     [generate_deploy_config_default.name]: generate_deploy_config_default,
-    [optimize_images_default.name]: optimize_images_default,
     [inline_animation_css_default.name]: inline_animation_css_default,
     [inject_visibility_css_default.name]: inject_visibility_css_default,
     [inject_template_hints_default.name]: inject_template_hints_default,
@@ -13529,8 +14051,11 @@ var init_plugins = __esm(() => {
     [tree_shake_framework_default.name]: tree_shake_framework_default,
     [inject_event_delegation_default.name]: inject_event_delegation_default,
     [compile_templates_default.name]: compile_templates_default,
+    [differential_serving_default.name]: differential_serving_default,
     [hoist_static_content_default.name]: hoist_static_content_default,
-    [normalize_directives_default.name]: normalize_directives_default
+    [normalize_directives_default.name]: normalize_directives_default,
+    [optimize_images_default.name]: optimize_images_default,
+    [fingerprint_assets_default.name]: fingerprint_assets_default
   };
 });
 
@@ -13704,8 +14229,8 @@ var init_prebuild = __esm(() => {
 
 // src/dev/server.js
 import { watch } from "fs";
-import { stat as stat2 } from "fs/promises";
-import { extname as extname3, join as join9, resolve as resolve6 } from "path";
+import { stat as stat4 } from "fs/promises";
+import { extname as extname5, join as join14, resolve as resolve6 } from "path";
 function logRequest(method, pathname, status, note) {
   const color = STATUS_COLORS[Math.floor(status / 100)] || "";
   const suffix = note ? ` ${DIM}${note}${RESET}` : "";
@@ -13798,7 +14323,7 @@ data:
         });
       }
       try {
-        let filePath = join9(root, pathname);
+        let filePath = join14(root, pathname);
         const realFile = resolve6(filePath);
         if (!realFile.startsWith(`${root}/`) && realFile !== root) {
           if (!quiet)
@@ -13810,14 +14335,14 @@ data:
         }
         let fileExists = await exists(filePath);
         if (fileExists) {
-          const fileStat = await stat2(filePath);
+          const fileStat = await stat4(filePath);
           if (fileStat.isDirectory()) {
-            filePath = join9(filePath, "index.html");
+            filePath = join14(filePath, "index.html");
             fileExists = await exists(filePath);
           }
         }
-        if (!fileExists && !extname3(pathname)) {
-          filePath = join9(root, "index.html");
+        if (!fileExists && !extname5(pathname)) {
+          filePath = join14(root, "index.html");
           fileExists = await exists(filePath);
         }
         if (!fileExists) {
@@ -13828,10 +14353,10 @@ data:
             headers: { "Content-Type": "text/plain" }
           });
         }
-        const ext = extname3(filePath);
+        const ext = extname5(filePath);
         const mime = MIME_TYPES[ext] || "application/octet-stream";
-        const relative3 = filePath.replace(root, ".");
-        const spaNote = relative3 !== `.${pathname}` ? `\u2192 ${relative3}` : "";
+        const relative7 = filePath.replace(root, ".");
+        const spaNote = relative7 !== `.${pathname}` ? `\u2192 ${relative7}` : "";
         if (!quiet)
           logRequest(method, pathname, 200, spaNote);
         if (liveReload && mime === "text/html") {
@@ -14302,8 +14827,8 @@ async function searchNpm(query2) {
 var CDN_REGISTRY_URL = "https://cdn.no-js.dev/plugins/registry.json", NPM_SEARCH_URL = "https://registry.npmjs.org/-/v1/search";
 
 // src/plugin/manager.js
-import { createHash as createHash4 } from "crypto";
-import { readFile as readFile5, writeFile as writeFile8 } from "fs/promises";
+import { createHash as createHash5 } from "crypto";
+import { readFile as readFile7, writeFile as writeFile13 } from "fs/promises";
 import { resolve as resolve7 } from "path";
 function validatePackageName(name) {
   if (!NPM_NAME_RE.test(name)) {
@@ -14439,13 +14964,13 @@ async function computeIntegrity(url) {
   if (!res.ok)
     throw new Error(`Failed to fetch plugin from ${url}: HTTP ${res.status}`);
   const buffer = await res.arrayBuffer();
-  const hash = createHash4("sha384").update(Buffer.from(buffer)).digest("base64");
+  const hash = createHash5("sha384").update(Buffer.from(buffer)).digest("base64");
   return `sha384-${hash}`;
 }
 async function loadProjectConfig() {
   const configPath = resolve7(process.cwd(), CONFIG_FILE);
   try {
-    const content = await readFile5(configPath, "utf-8");
+    const content = await readFile7(configPath, "utf-8");
     return JSON.parse(content);
   } catch {
     return { name: "nojs-project", version: "0.1.0", plugins: [] };
@@ -14453,7 +14978,7 @@ async function loadProjectConfig() {
 }
 async function saveProjectConfig(config) {
   const configPath = resolve7(process.cwd(), CONFIG_FILE);
-  await writeFile8(configPath, `${JSON.stringify(config, null, 2)}
+  await writeFile13(configPath, `${JSON.stringify(config, null, 2)}
 `, "utf-8");
 }
 var CONFIG_FILE = "nojs.config.json", CDN_BASE = "https://cdn.no-js.dev/plugins", NPM_NAME_RE;
@@ -14535,7 +15060,7 @@ var init_plugin = __esm(() => {
 // package.json
 var package_default = {
   name: "@dieison-depra/nojs-cli-bun",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Official CLI for No.JS \u2014 scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
   main: "src/cli.js",
   bin: {
