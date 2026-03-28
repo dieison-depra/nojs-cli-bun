@@ -26,3 +26,5 @@ coverage/
 
 # Test output
 test-results/
+
+dist/

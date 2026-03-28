@@ -86,6 +86,6 @@ function appendLink(doc, head, rel, href, as) {
 	link.setAttribute("rel", rel);
 	link.setAttribute("href", href);
 	if (as) link.setAttribute("as", as);
-	if (rel === "preconnect") link.setAttribute("crossorigin", "anonymous");
+	if (rel === "preconnect" || as === "fetch") link.setAttribute("crossorigin", "anonymous");
 	head.appendChild(link);
 }

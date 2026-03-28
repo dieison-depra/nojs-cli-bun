@@ -12415,6 +12415,42 @@ var init_audit_accessibility = __esm(() => {
 					);
 				}
 			}
+			if (rules["landmark-main"] !== false) {
+				const hasMain =
+					doc.querySelector("main") ||
+					doc.querySelector('[role="main"]');
+				if (!hasMain) {
+					violations.push(
+						`[landmark-main] document has no <main> landmark in ${label}`,
+					);
+				}
+			}
+			if (rules.list !== false) {
+				const ALLOWED = new Set(["li", "script", "template"]);
+				for (const list of doc.querySelectorAll("ul, ol, menu")) {
+					if (list.closest("template")) continue;
+					for (const child of list.children) {
+						if (!ALLOWED.has(child.tagName.toLowerCase())) {
+							violations.push(
+								`[list] <${list.tagName.toLowerCase()}> contains <${child.tagName.toLowerCase()}> (not a list item) in ${label}`,
+							);
+							break;
+						}
+					}
+				}
+			}
+			if (rules.listitem !== false) {
+				const LIST_PARENTS = new Set(["ul", "ol", "menu"]);
+				for (const li of doc.querySelectorAll("li")) {
+					if (li.closest("template")) continue;
+					const parent = li.parentElement;
+					if (!parent || !LIST_PARENTS.has(parent.tagName.toLowerCase())) {
+						violations.push(
+							`[listitem] <li> is not inside <ul>, <ol> or <menu> in ${label}`,
+						);
+					}
+				}
+			}
 			if (violations.length > 0) {
 				for (const v of violations) {
 					process.stderr.write(`[audit-accessibility] ${v}
@@ -13536,6 +13572,16 @@ var init_hoist_static_content = __esm(() => {
 		"show",
 		"hide",
 		"switch",
+		"each",
+		"template",
+		"watch",
+		"var",
+		"filter",
+		"include",
+		"loading",
+		"error",
+		"then",
+		"confirm",
 		"animate",
 		"animate-enter",
 		"animate-leave",
@@ -14027,6 +14073,8 @@ var init_inject_jsonld = __esm(() => {
 });
 
 // src/prebuild/plugins/inject-modulepreload.js
+import { readFile as readFile9 } from "node:fs/promises";
+import { dirname as dirname6, join as join15, relative as relative8 } from "node:path";
 function isInterpolated(url) {
 	return /\{[^}]+\}/.test(url);
 }
@@ -14038,14 +14086,59 @@ function isCrossOrigin(url) {
 		return false;
 	}
 }
+function appendModulepreload(doc, href) {
+	const link = doc.createElement("link");
+	link.setAttribute("rel", "modulepreload");
+	link.setAttribute("href", href);
+	doc.head.appendChild(link);
+}
+async function findWebRoot(startDir, webPath) {
+	if (!webPath.startsWith("/")) return startDir;
+	const rel = webPath.slice(1);
+	let dir = startDir;
+	for (;;) {
+		try {
+			await readFile9(join15(dir, rel));
+			return dir;
+		} catch {
+			const parent = dirname6(dir);
+			if (parent === dir) return null;
+			dir = parent;
+		}
+	}
+}
+const IMPORT_RE = /\bfrom\s+['"]([^'"]+)['"]/g;
+async function collectImports(filePath, webRoot, visited) {
+	let src;
+	try {
+		src = await readFile9(filePath, "utf8");
+	} catch {
+		return [];
+	}
+	const results = [];
+	const fileDir = dirname6(filePath);
+	IMPORT_RE.lastIndex = 0;
+	let m;
+	while ((m = IMPORT_RE.exec(src)) !== null) {
+		const specifier = m[1];
+		if (!specifier.startsWith(".")) continue;
+		const absPath = join15(fileDir, specifier);
+		if (visited.has(absPath)) continue;
+		visited.add(absPath);
+		results.push("/" + relative8(webRoot, absPath));
+		const nested = await collectImports(absPath, webRoot, visited);
+		results.push(...nested);
+	}
+	return results;
+}
 var inject_modulepreload_default;
 var init_inject_modulepreload = __esm(() => {
 	init_esm9();
 	inject_modulepreload_default = {
 		name: "inject-modulepreload",
 		description:
-			"Inject modulepreload hints for module scripts to reduce load latency.",
-		async process(html) {
+			"Inject modulepreload hints for module scripts and their transitive imports to reduce load latency.",
+		async process(html, { filePath } = {}) {
 			const { document: doc } = parseHTML(html);
 			if (!doc.head) return html;
 			const existing = new Set(
@@ -14057,19 +14150,23 @@ var init_inject_modulepreload = __esm(() => {
 			let changed = false;
 			for (const script of scripts) {
 				const src = script.getAttribute("src");
-				if (
-					!src ||
-					isInterpolated(src) ||
-					isCrossOrigin(src) ||
-					existing.has(src)
-				)
-					continue;
-				const link = doc.createElement("link");
-				link.setAttribute("rel", "modulepreload");
-				link.setAttribute("href", src);
-				doc.head.appendChild(link);
-				existing.add(src);
-				changed = true;
+				if (!src || isInterpolated(src) || isCrossOrigin(src)) continue;
+				if (!existing.has(src)) {
+					appendModulepreload(doc, src);
+					existing.add(src);
+					changed = true;
+				}
+				if (!filePath) continue;
+				const webRoot = await findWebRoot(dirname6(filePath), src);
+				if (!webRoot) continue;
+				const entryPath = join15(webRoot, src.startsWith("/") ? src.slice(1) : src);
+				const imports = await collectImports(entryPath, webRoot, new Set([entryPath]));
+				for (const webPath of imports) {
+					if (existing.has(webPath)) continue;
+					appendModulepreload(doc, webPath);
+					existing.add(webPath);
+					changed = true;
+				}
 			}
 			return changed ? doc.toString() : html;
 		},
@@ -14156,7 +14253,7 @@ function appendLink(doc, head, rel, href, as) {
 	link.setAttribute("rel", rel);
 	link.setAttribute("href", href);
 	if (as) link.setAttribute("as", as);
-	if (rel === "preconnect") link.setAttribute("crossorigin", "anonymous");
+	if (rel === "preconnect" || as === "fetch") link.setAttribute("crossorigin", "anonymous");
 	head.appendChild(link);
 }
 var inject_resource_hints_default;
@@ -14577,6 +14674,70 @@ var init_inline_critical_css = __esm(() => {
 `);
 				return html;
 			}
+		},
+	};
+});
+
+// src/prebuild/plugins/inline-css.js
+import { readFile as readFile10 } from "node:fs/promises";
+import { dirname as dirname7, join as join16 } from "node:path";
+function isCrossOriginCss(url) {
+	try {
+		new URL(url);
+		return true;
+	} catch {
+		return false;
+	}
+}
+async function findWebRootCss(startDir, webPath) {
+	if (!webPath.startsWith("/")) return startDir;
+	const rel = webPath.slice(1);
+	let dir = startDir;
+	for (;;) {
+		try {
+			await readFile10(join16(dir, rel));
+			return dir;
+		} catch {
+			const parent = dirname7(dir);
+			if (parent === dir) return null;
+			dir = parent;
+		}
+	}
+}
+var inline_css_default;
+var init_inline_css = __esm(() => {
+	init_esm9();
+	inline_css_default = {
+		name: "inline-css",
+		description:
+			"Inline local CSS stylesheets into <style> tags to eliminate render-blocking requests.",
+		async process(html, { filePath, config } = {}) {
+			const opts = config || {};
+			const maxSize = opts.maxSize ?? 10240;
+			const { document: doc } = parseHTML(html);
+			if (!doc.head) return html;
+			const links = [...doc.querySelectorAll('link[rel="stylesheet"][href]')];
+			if (links.length === 0) return html;
+			let changed = false;
+			for (const link of links) {
+				const href = link.getAttribute("href");
+				if (!href || isCrossOriginCss(href)) continue;
+				const webRoot = filePath ? await findWebRootCss(dirname7(filePath), href) : null;
+				if (!webRoot) continue;
+				const cssPath = join16(webRoot, href.startsWith("/") ? href.slice(1) : href);
+				let css;
+				try {
+					css = await readFile10(cssPath, "utf8");
+				} catch {
+					continue;
+				}
+				if (css.length > maxSize) continue;
+				const style = doc.createElement("style");
+				style.textContent = css;
+				link.parentNode.replaceChild(style, link);
+				changed = true;
+			}
+			return changed ? doc.toString() : html;
 		},
 	};
 });
@@ -15336,6 +15497,7 @@ var init_plugins = __esm(() => {
 	init_inject_visibility_css();
 	init_inline_animation_css();
 	init_inline_critical_css();
+	init_inline_css();
 	init_inline_svg();
 	init_minify_html();
 	init_normalize_directives();
@@ -15370,6 +15532,7 @@ var init_plugins = __esm(() => {
 		[precompress_assets_default.name]: precompress_assets_default,
 		[inject_jsonld_default.name]: inject_jsonld_default,
 		[inline_critical_css_default.name]: inline_critical_css_default,
+		[inline_css_default.name]: inline_css_default,
 		[optimize_fonts_default.name]: optimize_fonts_default,
 		[generate_responsive_images_default.name]:
 			generate_responsive_images_default,

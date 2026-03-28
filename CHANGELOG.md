@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-03-28
+
+### Added
+
+- **`inline-css` plugin** — Inlines local CSS stylesheets as `<style>` tags during prebuild, eliminating render-blocking HTTP requests for small stylesheets. Configurable via `maxSize` (default 10 KiB).
+- **`inject-modulepreload`: transitive import scanning** — Extended to read the module entry file and recursively trace `import … from "…"` statements, injecting `<link rel="modulepreload">` for each discovered local module. Reduces critical request chain depth from 2 to 1.
+- **`audit-accessibility`: three new rules** — `landmark-main` (document must have a `<main>` landmark), `list` (`<ul>`/`<ol>`/`<menu>` must contain only `<li>`, `<script>`, `<template>`), `listitem` (`<li>` must be inside a list parent). All rules skip content inside `<template>` elements to avoid false positives from inert template fragments.
+- **`inject-resource-hints`: `crossorigin="anonymous"` on fetch preloads** — Ensures credentials mode alignment between `<link rel="preload" as="fetch">` hints and the actual `fetch()` calls, preventing browser warnings.
+- **`hoist-static-content`: extended `DYNAMIC_ATTRS`** — Added `each`, `template`, `watch`, `var`, `filter`, `include`, `loading`, `error`, `then`, `confirm` to prevent elements with No.JS directives from being incorrectly marked as static.
+
+### Changed
+
+- `inject-modulepreload` now accepts `{ filePath }` context to resolve module paths on disk.
+- Updated test suite to 196 passing tests.
+
 ## [1.1.0] — 2026-03-28
 
 ### Added (Performance Evolution)

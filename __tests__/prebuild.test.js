@@ -98,6 +98,106 @@ describe("inject-resource-hints", () => {
 		const html = await readTestHtml("index.html");
 		expect(html).toContain('rel="preconnect"');
 	});
+
+	it("adds crossorigin=anonymous to preload as=fetch for same-origin URLs", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><div get="/api/users" as="users"></div></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "inject-resource-hints": true },
+		});
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('rel="preload"');
+		expect(html).toContain('as="fetch"');
+		expect(html).toContain('crossorigin="anonymous"');
+	});
+
+	it("adds crossorigin=anonymous to preload as=fetch for cross-origin URLs", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><div get="http://localhost:8083/api/cardapio" as="data"></div></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "inject-resource-hints": true },
+		});
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('rel="preload"');
+		expect(html).toContain('as="fetch"');
+		expect(html).toContain('crossorigin="anonymous"');
+	});
+
+	it("does not add crossorigin to preload as=style", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head><link rel="preload" as="style" href="/styles.css"></head><body></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "inject-resource-hints": true },
+		});
+		const html = await readTestHtml("index.html");
+		const match = html.match(/<link[^>]+as="style"[^>]*>/);
+		expect(match?.[0]).not.toContain('crossorigin');
+	});
+});
+
+describe("hoist-static-content", () => {
+	it("marks truly static nodes with data-nojs-static", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><body><div><p>Static text</p></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "hoist-static-content": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('data-nojs-static');
+	});
+
+	it("does not mark elements with each= as static", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><body><div get="/api/data" as="items"><ol each="item in items" template="item-tpl"></ol></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "hoist-static-content": true } });
+		const html = await readTestHtml("index.html");
+		const olMatch = html.match(/<ol[^>]*>/);
+		expect(olMatch?.[0]).not.toContain('data-nojs-static');
+	});
+
+	it("does not mark elements with template= as static", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><body><div get="/api/data" as="items"><ul each="item in items" template="row-tpl"></ul></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "hoist-static-content": true } });
+		const html = await readTestHtml("index.html");
+		const ulMatch = html.match(/<ul[^>]*>/);
+		expect(ulMatch?.[0]).not.toContain('data-nojs-static');
+	});
+
+	it("does not mark elements with show= as static", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><body><div show="someCondition"><p>Conditional</p></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "hoist-static-content": true } });
+		const html = await readTestHtml("index.html");
+		const divMatch = html.match(/<div[^>]*show[^>]*>/);
+		expect(divMatch?.[0]).not.toContain('data-nojs-static');
+	});
+
+	it("does not mark elements with loading= or error= as static", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><body><div get="/api/data" as="data" loading="#tpl" error="#err"><span bind="data.name"></span></div></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "hoist-static-content": true } });
+		const html = await readTestHtml("index.html");
+		const divMatch = html.match(/<div[^>]*get=[^>]*>/);
+		expect(divMatch?.[0]).not.toContain('data-nojs-static');
+	});
 });
 
 describe("inject-i18n-preload", () => {
@@ -1710,7 +1810,7 @@ describe("audit-accessibility", () => {
 	it('does not flag <img alt=""> (decorative image with empty alt is valid)', async () => {
 		await writeTestHtml(
 			"index.html",
-			'<html lang="en"><head></head><body><img src="/deco.jpg" alt=""></body></html>',
+			'<html lang="en"><head></head><body><main><img src="/deco.jpg" alt=""></main></body></html>',
 		);
 		await expect(
 			prebuild({
@@ -1731,6 +1831,91 @@ describe("audit-accessibility", () => {
 				plugins: { "audit-accessibility": { failOnError: true } },
 			}),
 		).rejects.toThrow(/violation/);
+	});
+
+	it("landmark-main: reports missing <main> element", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><div><p>Content</p></div></body></html>',
+		);
+		await expect(
+			prebuild({
+				cwd: testDir,
+				plugins: { "audit-accessibility": { failOnError: true } },
+			}),
+		).rejects.toThrow(/violation/);
+	});
+
+	it("landmark-main: passes when <main> is present", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><main><p>Content</p></main></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "audit-accessibility": { failOnError: true } },
+		});
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<main>");
+	});
+
+	it("landmark-main: passes when role=main is present", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><div role="main"><p>Content</p></div></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "audit-accessibility": { failOnError: true } },
+		});
+	});
+
+	it("list: reports non-<li> direct children in <ol>", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><main><ol><p>bad child</p></ol></main></body></html>',
+		);
+		await expect(
+			prebuild({
+				cwd: testDir,
+				plugins: { "audit-accessibility": { failOnError: true } },
+			}),
+		).rejects.toThrow(/violation/);
+	});
+
+	it("list: allows <li>, <script>, <template> as children of <ol>", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><main><ol><li>item</li><template id="tpl"><li>x</li></template></ol></main></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "audit-accessibility": { failOnError: true } },
+		});
+	});
+
+	it("listitem: reports <li> outside list parent", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><main><div><li>orphan</li></div></main></body></html>',
+		);
+		await expect(
+			prebuild({
+				cwd: testDir,
+				plugins: { "audit-accessibility": { failOnError: true } },
+			}),
+		).rejects.toThrow(/violation/);
+	});
+
+	it("listitem: ignores <li> inside inert <template>", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html lang="en"><head></head><body><main><p>content</p></main><template id="item-tpl"><li class="item">x</li></template></body></html>',
+		);
+		await prebuild({
+			cwd: testDir,
+			plugins: { "audit-accessibility": { failOnError: true } },
+		});
 	});
 });
 
@@ -2517,5 +2702,130 @@ describe("tree-shake-framework", () => {
 		});
 		const html = await readTestHtml("index.html");
 		expect(html).toContain('src="nojs.bundle.js"');
+	});
+});
+
+describe("inject-modulepreload", () => {
+	it("adds modulepreload for <script type=module src>", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><script type="module" src="/js/main.js"></script></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-modulepreload": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('rel="modulepreload"');
+		expect(html).toContain('href="/js/main.js"');
+	});
+
+	it("does not add modulepreload for cross-origin module scripts", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><script type="module" src="https://cdn.example.com/mod.js"></script></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-modulepreload": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).not.toContain('rel="modulepreload"');
+	});
+
+	it("does not duplicate modulepreload if already present", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head><link rel="modulepreload" href="/js/main.js"></head><body><script type="module" src="/js/main.js"></script></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-modulepreload": true } });
+		const html = await readTestHtml("index.html");
+		const count = (html.match(/modulepreload/g) || []).length;
+		expect(count).toBe(1); // existing tag only — plugin must not add a duplicate
+	});
+
+	it("discovers transitive imports from the module file", async () => {
+		await mkdir(join(testDir, "js", "app"), { recursive: true });
+		await writeFile(
+			join(testDir, "js", "main.js"),
+			'import { api } from "./app/api.js";\nimport { auth } from "./app/auth.js";\n',
+			"utf-8",
+		);
+		await writeFile(join(testDir, "js", "app", "api.js"), "export const api = {};", "utf-8");
+		await writeFile(join(testDir, "js", "app", "auth.js"), "export const auth = {};", "utf-8");
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><script type="module" src="/js/main.js"></script></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-modulepreload": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('href="/js/app/api.js"');
+		expect(html).toContain('href="/js/app/auth.js"');
+	});
+
+	it("skips bare/external specifiers in imports", async () => {
+		await mkdir(join(testDir, "js"), { recursive: true });
+		await writeFile(
+			join(testDir, "js", "main.js"),
+			'import { x } from "some-pkg";\nimport { y } from "https://cdn.example.com/y.js";\n',
+			"utf-8",
+		);
+		await writeTestHtml(
+			"index.html",
+			'<html><head></head><body><script type="module" src="/js/main.js"></script></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inject-modulepreload": true } });
+		const html = await readTestHtml("index.html");
+		// only /js/main.js itself gets a modulepreload; no bare/external specifiers
+		const matches = html.match(/href="[^"]*" rel="modulepreload"|rel="modulepreload"[^>]*href="[^"]*"/g) || [];
+		expect(matches.length).toBe(1);
+	});
+});
+
+describe("inline-css", () => {
+	it("inlines a local stylesheet as <style>", async () => {
+		await mkdir(join(testDir, "css"), { recursive: true });
+		await writeFile(join(testDir, "css", "style.css"), "body { margin: 0; }", "utf-8");
+		await writeTestHtml(
+			"index.html",
+			'<html><head><link rel="stylesheet" href="/css/style.css"></head><body></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inline-css": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<style>");
+		expect(html).toContain("body { margin: 0; }");
+		expect(html).not.toContain('rel="stylesheet"');
+	});
+
+	it("skips cross-origin stylesheets", async () => {
+		await writeTestHtml(
+			"index.html",
+			'<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto"></head><body></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inline-css": true } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('rel="stylesheet"');
+		expect(html).not.toContain("<style>");
+	});
+
+	it("skips stylesheets exceeding maxSize", async () => {
+		await mkdir(join(testDir, "css"), { recursive: true });
+		const largeCss = "a".repeat(11000);
+		await writeFile(join(testDir, "css", "large.css"), largeCss, "utf-8");
+		await writeTestHtml(
+			"index.html",
+			'<html><head><link rel="stylesheet" href="/css/large.css"></head><body></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inline-css": { maxSize: 10240 } } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain('rel="stylesheet"');
+		expect(html).not.toContain("<style>");
+	});
+
+	it("respects custom maxSize", async () => {
+		await mkdir(join(testDir, "css"), { recursive: true });
+		await writeFile(join(testDir, "css", "style.css"), "a".repeat(15000), "utf-8");
+		await writeTestHtml(
+			"index.html",
+			'<html><head><link rel="stylesheet" href="/css/style.css"></head><body></body></html>',
+		);
+		await prebuild({ cwd: testDir, plugins: { "inline-css": { maxSize: 20480 } } });
+		const html = await readTestHtml("index.html");
+		expect(html).toContain("<style>");
+		expect(html).not.toContain('rel="stylesheet"');
 	});
 });

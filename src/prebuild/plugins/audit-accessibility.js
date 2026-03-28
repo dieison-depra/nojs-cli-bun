@@ -85,6 +85,48 @@ export default {
 			}
 		}
 
+		// 6. landmark-main
+		if (rules["landmark-main"] !== false) {
+			const hasMain =
+				doc.querySelector("main") ||
+				doc.querySelector('[role="main"]');
+			if (!hasMain) {
+				violations.push(
+					`[landmark-main] document has no <main> landmark in ${label}`,
+				);
+			}
+		}
+
+		// 7. list — <ul>/<ol> must contain only <li>, <script>, <template>
+		if (rules.list !== false) {
+			const ALLOWED = new Set(["li", "script", "template"]);
+			for (const list of doc.querySelectorAll("ul, ol, menu")) {
+				if (list.closest("template")) continue; // skip inert template content
+				for (const child of list.children) {
+					if (!ALLOWED.has(child.tagName.toLowerCase())) {
+						violations.push(
+							`[list] <${list.tagName.toLowerCase()}> contains <${child.tagName.toLowerCase()}> (not a list item) in ${label}`,
+						);
+						break;
+					}
+				}
+			}
+		}
+
+		// 8. listitem — <li> must be inside <ul>, <ol>, or <menu>
+		if (rules.listitem !== false) {
+			const LIST_PARENTS = new Set(["ul", "ol", "menu"]);
+			for (const li of doc.querySelectorAll("li")) {
+				if (li.closest("template")) continue; // skip inert template content
+				const parent = li.parentElement;
+				if (!parent || !LIST_PARENTS.has(parent.tagName.toLowerCase())) {
+					violations.push(
+						`[listitem] <li> is not inside <ul>, <ol> or <menu> in ${label}`,
+					);
+				}
+			}
+		}
+
 		if (violations.length > 0) {
 			for (const v of violations) {
 				process.stderr.write(`[audit-accessibility] ${v}\n`);

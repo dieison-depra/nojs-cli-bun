@@ -31,6 +31,7 @@ import injectViewTransitions from "./inject-view-transitions.js";
 import injectVisibilityCss from "./inject-visibility-css.js";
 import inlineAnimationCss from "./inline-animation-css.js";
 import inlineCriticalCss from "./inline-critical-css.js";
+import inlineCss from "./inline-css.js";
 import inlineSvg from "./inline-svg.js";
 import minifyHtml from "./minify-html.js";
 import normalizeDirectives from "./normalize-directives.js";
@@ -66,6 +67,7 @@ export const builtinPlugins = {
 	[precompressAssets.name]: precompressAssets,
 	[injectJsonld.name]: injectJsonld,
 	[inlineCriticalCss.name]: inlineCriticalCss,
+	[inlineCss.name]: inlineCss,
 	[optimizeFonts.name]: optimizeFonts,
 	[generateResponsiveImages.name]: generateResponsiveImages,
 	[generatePwaManifest.name]: generatePwaManifest,
