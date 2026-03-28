@@ -2,6 +2,7 @@ import auditAccessibility from "./audit-accessibility.js";
 import auditMetaTags from "./audit-meta-tags.js";
 import compileTemplates from "./compile-templates.js";
 import enforceScriptLoading from "./enforce-script-loading.js";
+import generateBundleReport from "./generate-bundle-report.js";
 import generateDeployConfig from "./generate-deploy-config.js";
 import generateImportMap from "./generate-import-map.js";
 import generatePwaManifest from "./generate-pwa-manifest.js";
@@ -38,6 +39,7 @@ export const builtinPlugins = {
 	[injectSpeculationRules.name]: injectSpeculationRules,
 	[injectOgTwitter.name]: injectOgTwitter,
 	[generateSitemap.name]: generateSitemap,
+	[generateBundleReport.name]: generateBundleReport,
 	[generateImportMap.name]: generateImportMap,
 	[generateDeployConfig.name]: generateDeployConfig,
 	[inlineAnimationCss.name]: inlineAnimationCss,
