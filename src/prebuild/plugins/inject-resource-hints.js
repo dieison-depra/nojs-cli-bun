@@ -44,21 +44,6 @@ export default {
 			existingHrefs.add(src);
 		}
 
-		// B3 — i18n locale preload
-		const lang = doc.documentElement?.getAttribute("lang") || "";
-		if (lang && !isEnglishLocale(lang) && isValidLocaleCode(lang)) {
-			const localeHref = `/locales/${lang}.json`;
-			if (!existingHrefs.has(localeHref)) {
-				const link = doc.createElement("link");
-				link.setAttribute("rel", "preload");
-				link.setAttribute("as", "fetch");
-				link.setAttribute("href", localeHref);
-				link.setAttribute("crossorigin", "anonymous");
-				head.appendChild(link);
-				existingHrefs.add(localeHref);
-			}
-		}
-
 		// B4 — Base API DNS prefetch
 		if (config.apiBase) {
 			try {

@@ -15,6 +15,7 @@ import injectCanonicalUrl from "./inject-canonical-url.js";
 import injectCspHashes from "./inject-csp-hashes.js";
 import injectEventDelegation from "./inject-event-delegation.js";
 import injectHeadAttrs from "./inject-head-attrs.js";
+import injectI18nPreload from "./inject-i18n-preload.js";
 import injectJsonld from "./inject-jsonld.js";
 import injectModulepreload from "./inject-modulepreload.js";
 import injectOgTwitter from "./inject-og-twitter.js";
@@ -38,6 +39,7 @@ import treeShakeFramework from "./tree-shake-framework.js";
 export const builtinPlugins = {
 	[injectResourceHints.name]: injectResourceHints,
 	[injectHeadAttrs.name]: injectHeadAttrs,
+	[injectI18nPreload.name]: injectI18nPreload,
 	[injectSpeculationRules.name]: injectSpeculationRules,
 	[injectOgTwitter.name]: injectOgTwitter,
 	[generateSitemap.name]: generateSitemap,
