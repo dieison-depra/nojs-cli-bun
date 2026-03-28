@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import plugin from "../src/prebuild/plugins/generate-import-map.js";
 
 describe("generate-import-map plugin", () => {
@@ -16,9 +16,9 @@ describe("generate-import-map plugin", () => {
 		const config = {
 			importMap: {
 				imports: {
-					"my-lib": "/libs/my-lib.js"
-				}
-			}
+					"my-lib": "/libs/my-lib.js",
+				},
+			},
 		};
 		const result = await plugin.process(html, { config });
 
@@ -31,9 +31,9 @@ describe("generate-import-map plugin", () => {
 		const config = {
 			importMap: {
 				imports: {
-					"nojs": "https://cdn.example.com/nojs.js"
-				}
-			}
+					nojs: "https://cdn.example.com/nojs.js",
+				},
+			},
 		};
 		const result = await plugin.process(html, { config });
 

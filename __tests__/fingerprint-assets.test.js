@@ -1,8 +1,8 @@
-import { describe, it, expect, afterEach } from "bun:test";
-import plugin from "../src/prebuild/plugins/fingerprint-assets.js";
-import { mkdir, writeFile, rm, existsSync, readFile, readdir } from "node:fs";
+import { afterEach, describe, expect, it } from "bun:test";
+import { existsSync, mkdir, readdir, readFile, rm, writeFile } from "node:fs";
+import { join } from "node:path";
 import { promisify } from "node:util";
-import { join, basename } from "node:path";
+import plugin from "../src/prebuild/plugins/fingerprint-assets.js";
 
 const mkdirAsync = promisify(mkdir);
 const writeFileAsync = promisify(writeFile);
@@ -21,13 +21,13 @@ describe("fingerprint-assets plugin", () => {
 
 	it("should rename assets with hashes and update HTML", async () => {
 		await mkdirAsync(tmpDir, { recursive: true });
-		
+
 		const jsContent = "console.log('hello')";
 		await writeFileAsync(join(tmpDir, "app.js"), jsContent);
-		
+
 		const cssContent = "body { color: blue }";
 		await writeFileAsync(join(tmpDir, "style.css"), cssContent);
-		
+
 		const html = `
 			<html>
 				<head>
@@ -46,8 +46,12 @@ describe("fingerprint-assets plugin", () => {
 		});
 
 		const files = await readdirAsync(tmpDir);
-		const fingerprintedJs = files.find(f => f.startsWith("app.") && f.endsWith(".js"));
-		const fingerprintedCss = files.find(f => f.startsWith("style.") && f.endsWith(".css"));
+		const fingerprintedJs = files.find(
+			(f) => f.startsWith("app.") && f.endsWith(".js"),
+		);
+		const fingerprintedCss = files.find(
+			(f) => f.startsWith("style.") && f.endsWith(".css"),
+		);
 
 		expect(fingerprintedJs).toBeDefined();
 		expect(fingerprintedJs).not.toBe("app.js");

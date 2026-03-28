@@ -16,7 +16,12 @@ export default {
 		const head = doc.head;
 		if (!head) return html;
 
-		const eventsToDelegate = config.events || ["click", "input", "change", "submit"];
+		const eventsToDelegate = config.events || [
+			"click",
+			"input",
+			"change",
+			"submit",
+		];
 		let hasDelegated = false;
 
 		const allElements = doc.querySelectorAll("*");
@@ -43,7 +48,12 @@ export default {
 
 			if (delegatedForThisEl.length > 0) {
 				const existing = el.getAttribute("data-nojs-event") || "";
-				const combined = [...new Set([...existing.split(",").filter(Boolean), ...delegatedForThisEl])].join(",");
+				const combined = [
+					...new Set([
+						...existing.split(",").filter(Boolean),
+						...delegatedForThisEl,
+					]),
+				].join(",");
 				el.setAttribute("data-nojs-event", combined);
 			}
 		}

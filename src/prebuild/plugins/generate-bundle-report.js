@@ -1,10 +1,11 @@
-import { writeFile, readdir, stat } from "node:fs/promises";
+import { readdir, stat, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 /** @type {import("../runner.js").Plugin} */
 export default {
 	name: "generate-bundle-report",
-	description: "Generate a visual report of the bundle composition and sizes (HTML report)",
+	description:
+		"Generate a visual report of the bundle composition and sizes (HTML report)",
 
 	async finalize({ outputDir }) {
 		const files = await getFilesRecursively(outputDir);

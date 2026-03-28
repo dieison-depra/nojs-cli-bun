@@ -1,11 +1,12 @@
-import { writeFile, readdir, stat } from "node:fs/promises";
+import { readdir, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { parseHTML } from "linkedom";
 
 /** @type {import("../runner.js").Plugin} */
 export default {
 	name: "generate-service-worker",
-	description: "Generate a Service Worker for precaching assets and offline support",
+	description:
+		"Generate a Service Worker for precaching assets and offline support",
 
 	async process(html) {
 		const { document: doc } = parseHTML(html);
@@ -37,9 +38,14 @@ if ('serviceWorker' in navigator) {
 		const cacheName = config.cacheName || `nojs-cache-${Date.now()}`;
 
 		const assetsToCache = allFiles
-			.map((f) => "/" + relative(outputDir, f).replace(/\\/g, "/"))
+			.map((f) => `/${relative(outputDir, f).replace(/\\/g, "/")}`)
 			.filter((f) => {
-				const skip = [swName, "_headers", "_redirects", "nojs-bundle-report.html"];
+				const skip = [
+					swName,
+					"_headers",
+					"_redirects",
+					"nojs-bundle-report.html",
+				];
 				return !skip.some((s) => f.endsWith(s));
 			});
 
@@ -75,7 +81,9 @@ self.addEventListener('fetch', event => {
 
 		const dest = join(outputDir, swName);
 		await writeFile(dest, swContent, "utf-8");
-		console.log(`[generate-service-worker] ${dest}: Service Worker generated with ${assetsToCache.length} assets`);
+		console.log(
+			`[generate-service-worker] ${dest}: Service Worker generated with ${assetsToCache.length} assets`,
+		);
 	},
 };
 

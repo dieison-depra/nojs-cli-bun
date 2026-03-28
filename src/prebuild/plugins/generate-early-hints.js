@@ -97,7 +97,7 @@ export default {
 };
 
 function getPublicPath(outputPath, outputDir) {
-	let rel = "/" + relative(outputDir, outputPath).replace(/\\/g, "/");
+	const rel = `/${relative(outputDir, outputPath).replace(/\\/g, "/")}`;
 	if (rel === "/index.html") return "/";
 	if (rel.endsWith("/index.html")) return rel.slice(0, -10);
 	return rel;

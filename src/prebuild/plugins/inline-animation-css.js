@@ -77,12 +77,11 @@ export default {
 			}
 		}
 
-		for (const tpl of doc.querySelectorAll('template')) {
+		for (const tpl of doc.querySelectorAll("template")) {
 			const content = tpl.outerHTML;
 			for (const attr of ANIM_ATTRS) {
-				const re = new RegExp(`${attr}="([^"]+)"`, 'g');
-				let m;
-				while ((m = re.exec(content)) !== null) {
+				const re = new RegExp(`${attr}="([^"]+)"`, "g");
+				for (const m of content.matchAll(re)) {
 					names.add(m[1].trim());
 				}
 			}

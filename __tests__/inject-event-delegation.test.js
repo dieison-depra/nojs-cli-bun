@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import plugin from "../src/prebuild/plugins/inject-event-delegation.js";
 
 describe("inject-event-delegation plugin", () => {
@@ -16,8 +16,8 @@ describe("inject-event-delegation plugin", () => {
 		expect(result).toContain('data-nojs-event="click"');
 		expect(result).toContain('data-nojs-on-click="count++"');
 		expect(result).not.toContain('on:click="count++"');
-		expect(result).toContain('data-nojs-delegation');
-		expect(result).toContain('document.addEventListener');
+		expect(result).toContain("data-nojs-delegation");
+		expect(result).toContain("document.addEventListener");
 	});
 
 	it("should handle multiple events on the same element", async () => {
@@ -61,10 +61,12 @@ describe("inject-event-delegation plugin", () => {
 			</html>
 		`;
 
-		const result = await plugin.process(html, { config: { events: ["click"] } });
+		const result = await plugin.process(html, {
+			config: { events: ["click"] },
+		});
 		expect(result).toContain('data-nojs-event="click"');
 		expect(result).toContain('data-nojs-on-click="count++"');
 		expect(result).toContain('on:mouseover="hover()"');
-		expect(result).not.toContain('data-nojs-on-mouseover');
+		expect(result).not.toContain("data-nojs-on-mouseover");
 	});
 });

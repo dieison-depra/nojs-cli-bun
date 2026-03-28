@@ -1,8 +1,8 @@
-import { describe, it, expect, afterEach } from "bun:test";
-import plugin from "../src/prebuild/plugins/differential-serving.js";
-import { mkdir, writeFile, rm, existsSync, readFile } from "node:fs";
-import { promisify } from "node:util";
+import { afterEach, describe, expect, it } from "bun:test";
+import { existsSync, mkdir, readFile, rm, writeFile } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
+import plugin from "../src/prebuild/plugins/differential-serving.js";
 
 const mkdirAsync = promisify(mkdir);
 const writeFileAsync = promisify(writeFile);
@@ -22,7 +22,7 @@ describe("differential-serving plugin", () => {
 		await mkdirAsync(tmpDir, { recursive: true });
 		const jsContent = "console.log('modern')";
 		await writeFileAsync(join(tmpDir, "app.js"), jsContent);
-		
+
 		const html = '<html><body><script src="app.js"></script></body></html>';
 		const indexPath = join(tmpDir, "index.html");
 		await writeFileAsync(indexPath, html);
@@ -34,9 +34,9 @@ describe("differential-serving plugin", () => {
 
 		const updatedHtml = await readFileAsync(indexPath, "utf-8");
 		expect(updatedHtml).toContain('type="module"');
-		expect(updatedHtml).toContain('nomodule');
+		expect(updatedHtml).toContain("nomodule");
 		expect(updatedHtml).toContain('src="app.legacy.js"');
-		
+
 		expect(existsSync(join(tmpDir, "app.legacy.js"))).toBe(true);
 	});
 });

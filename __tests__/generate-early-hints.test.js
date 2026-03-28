@@ -1,8 +1,8 @@
-import { describe, it, expect, afterEach } from "bun:test";
-import plugin from "../src/prebuild/plugins/generate-early-hints.js";
-import { mkdir, writeFile, rm, existsSync, readFile } from "node:fs";
-import { promisify } from "node:util";
+import { afterEach, describe, expect, it } from "bun:test";
+import { existsSync, mkdir, readFile, rm, writeFile } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
+import plugin from "../src/prebuild/plugins/generate-early-hints.js";
 
 const mkdirAsync = promisify(mkdir);
 const writeFileAsync = promisify(writeFile);

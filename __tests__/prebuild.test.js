@@ -1861,7 +1861,7 @@ describe("inject-head-attrs — body directives and isSpaDefault", () => {
 	it("body page-title static literal → injects <title>", async () => {
 		await writeTestHtml(
 			"index.html",
-			'<html><head></head><body><div hidden page-title="\'About Us\'"></div></body></html>',
+			"<html><head></head><body><div hidden page-title=\"'About Us'\"></div></body></html>",
 		);
 		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
 		const html = await readTestHtml("index.html");
@@ -1878,10 +1878,10 @@ describe("inject-head-attrs — body directives and isSpaDefault", () => {
 		expect(html).not.toContain("<title>");
 	});
 
-	it("body page-description static → injects <meta name=\"description\">", async () => {
+	it('body page-description static → injects <meta name="description">', async () => {
 		await writeTestHtml(
 			"index.html",
-			'<html><head></head><body><div hidden page-description="\'Great site\'"></div></body></html>',
+			"<html><head></head><body><div hidden page-description=\"'Great site'\"></div></body></html>",
 		);
 		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
 		const html = await readTestHtml("index.html");
@@ -1889,10 +1889,10 @@ describe("inject-head-attrs — body directives and isSpaDefault", () => {
 		expect(html).toContain('content="Great site"');
 	});
 
-	it("body page-canonical static → injects <link rel=\"canonical\">", async () => {
+	it('body page-canonical static → injects <link rel="canonical">', async () => {
 		await writeTestHtml(
 			"index.html",
-			'<html><head></head><body><div hidden page-canonical="\'/about\'"></div></body></html>',
+			"<html><head></head><body><div hidden page-canonical=\"'/about'\"></div></body></html>",
 		);
 		await prebuild({ cwd: testDir, plugins: { "inject-head-attrs": true } });
 		const html = await readTestHtml("index.html");
@@ -1900,7 +1900,7 @@ describe("inject-head-attrs — body directives and isSpaDefault", () => {
 		expect(html).toContain('href="/about"');
 	});
 
-	it("body page-jsonld → injects <script type=\"application/ld+json\" data-nojs>", async () => {
+	it('body page-jsonld → injects <script type="application/ld+json" data-nojs>', async () => {
 		await writeTestHtml(
 			"index.html",
 			'<html><head></head><body><script type="application/json" hidden page-jsonld>{"@type":"WebPage"}</script></body></html>',
@@ -1917,7 +1917,7 @@ describe("inject-head-attrs — body directives and isSpaDefault", () => {
 			"index.html",
 			[
 				"<html><head></head><body>",
-				'<div hidden page-title="\'Body Title\'"></div>',
+				"<div hidden page-title=\"'Body Title'\"></div>",
 				'<template route="/" page-title="\'Template Title\'"></template>',
 				"</body></html>",
 			].join(""),
@@ -2038,7 +2038,7 @@ describe("optimize-images — extended guards", () => {
 		await writeTestHtml(
 			"index.html",
 			[
-				"<html><head><meta charset=\"UTF-8\"></head><body>",
+				'<html><head><meta charset="UTF-8"></head><body>',
 				'<img src="/hero.jpg" alt="hero">',
 				"</body></html>",
 			].join(""),
@@ -2061,7 +2061,7 @@ describe("optimize-images — extended guards", () => {
 		);
 		await prebuild({ cwd: testDir, plugins: { "optimize-images": true } });
 		console.warn = orig;
-		expect(warned.some(w => w.includes("missing alt"))).toBe(true);
+		expect(warned.some((w) => w.includes("missing alt"))).toBe(true);
 	});
 });
 
@@ -2155,7 +2155,10 @@ describe("generate-deploy-config", () => {
 
 	it("generates Netlify _redirects by default", async () => {
 		await writeTestHtml("index.html", BASE_HTML);
-		await prebuild({ cwd: testDir, plugins: { "generate-deploy-config": true } });
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": true },
+		});
 		const content = await readFile(join(testDir, "_redirects"), "utf-8");
 		expect(content.trim()).toBe("/* /index.html 200");
 	});
@@ -2224,9 +2227,13 @@ describe("generate-deploy-config", () => {
 		await writeTestHtml("index.html", BASE_HTML);
 		await prebuild({
 			cwd: testDir,
-			plugins: { "generate-deploy-config": { targets: ["vercel"], base: "/app" } },
+			plugins: {
+				"generate-deploy-config": { targets: ["vercel"], base: "/app" },
+			},
 		});
-		const json = JSON.parse(await readFile(join(testDir, "vercel.json"), "utf-8"));
+		const json = JSON.parse(
+			await readFile(join(testDir, "vercel.json"), "utf-8"),
+		);
 		expect(json.rewrites[0].source).toBe("/app/(.*)");
 		expect(json.rewrites[0].destination).toBe("/app/index.html");
 	});
@@ -2243,7 +2250,10 @@ describe("generate-deploy-config", () => {
 		const warns = [];
 		const origWarn = console.warn;
 		console.warn = (...args) => warns.push(args.join(" "));
-		await prebuild({ cwd: testDir, plugins: { "generate-deploy-config": true } });
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": true },
+		});
 		console.warn = origWarn;
 		expect(warns.some((w) => w.includes("useHash"))).toBe(true);
 	});
@@ -2259,7 +2269,10 @@ describe("generate-deploy-config", () => {
 		);
 		const origWarn = console.warn;
 		console.warn = () => {};
-		await prebuild({ cwd: testDir, plugins: { "generate-deploy-config": true } });
+		await prebuild({
+			cwd: testDir,
+			plugins: { "generate-deploy-config": true },
+		});
 		console.warn = origWarn;
 		const content = await readFile(join(testDir, "_redirects"), "utf-8");
 		expect(content).toContain("index.html");
@@ -2304,10 +2317,18 @@ async function createMockFrameworkSrc(dir) {
 	];
 
 	for (const m of coreModules) {
-		await writeFile(join(srcDir, m), `export const _${m.replace(".js","")} = true;\n`, "utf-8");
+		await writeFile(
+			join(srcDir, m),
+			`export const _${m.replace(".js", "")} = true;\n`,
+			"utf-8",
+		);
 	}
 	for (const m of directiveModules) {
-		await writeFile(join(dirsDir, m), `export const _${m.replace(".js","")} = true;\n`, "utf-8");
+		await writeFile(
+			join(dirsDir, m),
+			`export const _${m.replace(".js", "")} = true;\n`,
+			"utf-8",
+		);
 	}
 
 	// index.js with the same side-effect import pattern as the real framework
@@ -2331,7 +2352,7 @@ async function createMockFrameworkSrc(dir) {
 		'import "./directives/dnd.js";',
 		'import "./directives/head.js";',
 		'const NoJS = { version: "0.0.0-test", init() {} };',
-		'export default NoJS;',
+		"export default NoJS;",
 	].join("\n");
 	await writeFile(join(srcDir, "index.js"), indexContent, "utf-8");
 
@@ -2401,7 +2422,7 @@ describe("tree-shake-framework", () => {
 		await writeTestHtml(
 			"index.html",
 			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
-			'<body><div state="{}"><p show="true">hi</p></div></body></html>',
+				'<body><div state="{}"><p show="true">hi</p></div></body></html>',
 		);
 		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
 		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
@@ -2414,7 +2435,7 @@ describe("tree-shake-framework", () => {
 		await writeTestHtml(
 			"index.html",
 			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
-			'<body><div state="{}"></div></body></html>',
+				'<body><div state="{}"></div></body></html>',
 		);
 		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
 		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
@@ -2426,7 +2447,7 @@ describe("tree-shake-framework", () => {
 		await writeTestHtml(
 			"index.html",
 			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
-			'<body><div if="true">hi</div></body></html>',
+				'<body><div if="true">hi</div></body></html>',
 		);
 		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
 		const bundle = await readFile(join(testDir, "nojs.bundle.js"), "utf-8");
@@ -2439,12 +2460,12 @@ describe("tree-shake-framework", () => {
 		await writeTestHtml(
 			"with-events.html",
 			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
-			'<body><button on-click="fn()">click</button></body></html>',
+				'<body><button on-click="fn()">click</button></body></html>',
 		);
 		await writeTestHtml(
 			"without-events.html",
 			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
-			'<body><p>no events</p></body></html>',
+				"<body><p>no events</p></body></html>",
 		);
 		// First: only with-events to get events module
 		const td1 = join(testDir, "run1");
@@ -2453,19 +2474,29 @@ describe("tree-shake-framework", () => {
 		await writeFile(
 			join(td1, "index.html"),
 			'<html><head><script src="https://cdn.no-js.dev/nojs.min.js"></script></head>' +
-			'<body><button on-click="fn()">click</button></body></html>',
+				'<body><button on-click="fn()">click</button></body></html>',
 			"utf-8",
 		);
 		await prebuild({ cwd: td1, plugins: { "tree-shake-framework": true } });
-		const bundleWithEvents = await readFile(join(td1, "nojs.bundle.js"), "utf-8");
+		const bundleWithEvents = await readFile(
+			join(td1, "nojs.bundle.js"),
+			"utf-8",
+		);
 		expect(bundleWithEvents).not.toContain("dnd");
 	});
 
 	it("replaces script tag across multiple HTML files", async () => {
 		await createMockFrameworkSrc(testDir);
-		const scriptTag = '<script src="https://cdn.no-js.dev/nojs.min.js"></script>';
-		await writeTestHtml("index.html", `<html><head>${scriptTag}</head><body></body></html>`);
-		await writeTestHtml("about.html", `<html><head>${scriptTag}</head><body></body></html>`);
+		const scriptTag =
+			'<script src="https://cdn.no-js.dev/nojs.min.js"></script>';
+		await writeTestHtml(
+			"index.html",
+			`<html><head>${scriptTag}</head><body></body></html>`,
+		);
+		await writeTestHtml(
+			"about.html",
+			`<html><head>${scriptTag}</head><body></body></html>`,
+		);
 		await prebuild({ cwd: testDir, plugins: { "tree-shake-framework": true } });
 		const index = await readTestHtml("index.html");
 		const about = await readTestHtml("about.html");

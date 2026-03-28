@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import plugin from "../src/prebuild/plugins/inject-i18n-preload.js";
 
 describe("inject-i18n-preload plugin", () => {
@@ -19,7 +19,9 @@ describe("inject-i18n-preload plugin", () => {
 
 	it("should respect custom localesDir", async () => {
 		const html = '<html lang="fr"><head></head><body></body></html>';
-		const result = await plugin.process(html, { config: { localesDir: "/assets/lang/" } });
+		const result = await plugin.process(html, {
+			config: { localesDir: "/assets/lang/" },
+		});
 		expect(result).toContain('href="/assets/lang/fr.json"');
 	});
 });

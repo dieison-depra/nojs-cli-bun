@@ -1,8 +1,8 @@
-import { describe, it, expect, afterEach } from "bun:test";
-import plugin from "../src/prebuild/plugins/generate-bundle-report.js";
-import { mkdir, writeFile, rm, existsSync } from "node:fs";
-import { promisify } from "node:util";
+import { afterEach, describe, expect, it } from "bun:test";
+import { existsSync, mkdir, rm, writeFile } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
+import plugin from "../src/prebuild/plugins/generate-bundle-report.js";
 
 const mkdirAsync = promisify(mkdir);
 const writeFileAsync = promisify(writeFile);

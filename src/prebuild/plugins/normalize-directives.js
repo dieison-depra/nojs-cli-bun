@@ -35,23 +35,26 @@ export default {
 
 		// Also handle text nodes
 		const walker = doc.createTreeWalker(doc.body || doc, 4 /* SHOW_TEXT */);
-		let node;
-		while ((node = walker.nextNode())) {
+		let node = walker.nextNode();
+		while (node) {
 			const text = node.textContent || "";
 			if (INTERPOLATION_RE.test(text)) {
 				node.textContent = this._normalizeExpression(text);
 			}
+			node = walker.nextNode();
 		}
 
 		return doc.toString();
 	},
 
-	async finalize({ outputDir }) {
+	async finalize() {
 		if (this._pathMap.size === 0) return this._reset();
 
-		console.log(`[normalize-directives] Normalized ${this._pathMap.size} state paths`);
-		
-		// In a real implementation, we might want to write the map to a file 
+		console.log(
+			`[normalize-directives] Normalized ${this._pathMap.size} state paths`,
+		);
+
+		// In a real implementation, we might want to write the map to a file
 		// or inject a script that explains the mapping to the runtime.
 		// For now, we'll just log and reset.
 		this._reset();
@@ -59,18 +62,18 @@ export default {
 
 	_normalizeExpression(expr) {
 		// First handle interpolations if any
-		let result = expr.replace(INTERPOLATION_RE, (match, inner) => {
+		let result = expr.replace(INTERPOLATION_RE, (_match, inner) => {
 			return `\${${this._normalizeStatePaths(inner)}}`;
 		});
 
 		// Then handle the whole expression (it might be a direct binding)
 		result = this._normalizeStatePaths(result);
-		
+
 		return result;
 	},
 
 	_normalizeStatePaths(expr) {
-		return expr.replace(STATE_PATH_RE, (match, path) => {
+		return expr.replace(STATE_PATH_RE, (_match, path) => {
 			if (!this._pathMap.has(path)) {
 				this._pathMap.set(path, this._nextIndex++);
 			}

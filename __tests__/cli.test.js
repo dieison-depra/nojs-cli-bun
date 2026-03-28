@@ -1,6 +1,6 @@
-import { describe, expect, it, spyOn, beforeEach, afterEach } from "bun:test";
-import { run } from "../src/cli.js";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import pkg from "../package.json" with { type: "json" };
+import { run } from "../src/cli.js";
 
 describe("nojs CLI", () => {
 	let logSpy, errorSpy;
@@ -19,8 +19,8 @@ describe("nojs CLI", () => {
 		const argv = args.trim() ? args.trim().split(/\s+/) : [];
 		await run(argv);
 		return {
-			stdout: logSpy.mock.calls.map(args => args.join(" ")).join("\n"),
-			stderr: errorSpy.mock.calls.map(args => args.join(" ")).join("\n"),
+			stdout: logSpy.mock.calls.map((args) => args.join(" ")).join("\n"),
+			stderr: errorSpy.mock.calls.map((args) => args.join(" ")).join("\n"),
 		};
 	}
 

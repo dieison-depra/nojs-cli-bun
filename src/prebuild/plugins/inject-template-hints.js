@@ -32,7 +32,7 @@ export default {
 			const tpl = doc.getElementById(id);
 			if (!tpl) continue;
 			const root = tpl?.content ?? tpl;
-			for (const el of root?.querySelectorAll('[class]') ?? []) {
+			for (const el of root?.querySelectorAll("[class]") ?? []) {
 				for (const cls of el.classList) {
 					if (/skeleton/i.test(cls)) hasSkeletonClass = true;
 				}

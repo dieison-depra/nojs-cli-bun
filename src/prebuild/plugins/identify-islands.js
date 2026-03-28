@@ -1,14 +1,30 @@
 import { parseHTML } from "linkedom";
 
 const INTERACTIVE_ATTRS = [
-	"state", "store", "bind", "model", "if", "for", "foreach", "on:", "on-",
-	"t", "bind-t", "ref", "validate", "animate", "transition", "get", "post"
+	"state",
+	"store",
+	"bind",
+	"model",
+	"if",
+	"for",
+	"foreach",
+	"on:",
+	"on-",
+	"t",
+	"bind-t",
+	"ref",
+	"validate",
+	"animate",
+	"transition",
+	"get",
+	"post",
 ];
 
 /** @type {import("../runner.js").Plugin} */
 export default {
 	name: "identify-islands",
-	description: "Identify interactive 'islands' in HTML to reduce initial JS processing scope",
+	description:
+		"Identify interactive 'islands' in HTML to reduce initial JS processing scope",
 
 	async process(html) {
 		const { document: doc } = parseHTML(html);
@@ -19,9 +35,11 @@ export default {
 		const allElements = body.querySelectorAll("*");
 
 		for (const el of allElements) {
-			const hasDirective = el.getAttributeNames().some(attr => 
-				INTERACTIVE_ATTRS.some(prefix => attr.startsWith(prefix))
-			);
+			const hasDirective = el
+				.getAttributeNames()
+				.some((attr) =>
+					INTERACTIVE_ATTRS.some((prefix) => attr.startsWith(prefix)),
+				);
 
 			if (hasDirective) {
 				// Find if any ancestor is already an island

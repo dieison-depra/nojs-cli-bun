@@ -72,14 +72,6 @@ function isInterpolated(url) {
 	return /\{[^}]+\}/.test(url);
 }
 
-function isEnglishLocale(lang) {
-	return lang === "en" || lang.startsWith("en-");
-}
-
-function isValidLocaleCode(lang) {
-	return /^[a-z]{2}$/.test(lang) || /^[a-z]{2}-[A-Z]{2}$/.test(lang);
-}
-
 function isCrossOrigin(url) {
 	try {
 		new URL(url);

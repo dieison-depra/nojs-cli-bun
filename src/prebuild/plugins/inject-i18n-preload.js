@@ -3,7 +3,8 @@ import { parseHTML } from "linkedom";
 /** @type {import("../runner.js").Plugin} */
 export default {
 	name: "inject-i18n-preload",
-	description: "Inject <link rel='preload'> for the default language locale file",
+	description:
+		"Inject <link rel='preload'> for the default language locale file",
 
 	async process(html, { config }) {
 		const { document: doc } = parseHTML(html);
@@ -14,9 +15,11 @@ export default {
 		if (!lang || isEnglishLocale(lang) || !isValidLocaleCode(lang)) return html;
 
 		const localesDir = config.localesDir || "/locales/";
-		const localeHref = `${localesDir.endsWith("/") ? localesDir : localesDir + "/"}${lang}.json`;
+		const localeHref = `${localesDir.endsWith("/") ? localesDir : `${localesDir}/`}${lang}.json`;
 
-		const existingPreload = head.querySelector(`link[rel="preload"][href="${localeHref}"]`);
+		const existingPreload = head.querySelector(
+			`link[rel="preload"][href="${localeHref}"]`,
+		);
 		if (existingPreload) return html;
 
 		const link = doc.createElement("link");

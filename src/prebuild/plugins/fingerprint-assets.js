@@ -1,6 +1,6 @@
-import { readFile, writeFile, rename, readdir } from "node:fs/promises";
-import { join, dirname, basename, extname, relative } from "node:path";
 import { createHash } from "node:crypto";
+import { readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, join } from "node:path";
 
 /** @type {import("../runner.js").Plugin} */
 export default {

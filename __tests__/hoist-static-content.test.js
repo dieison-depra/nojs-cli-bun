@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import plugin from "../src/prebuild/plugins/hoist-static-content.js";
 
 describe("hoist-static-content plugin", () => {
@@ -19,9 +19,13 @@ describe("hoist-static-content plugin", () => {
 		const result = await plugin.process(html);
 		expect(result).toContain('data-nojs-static=""');
 		// Use regex for flexible attribute order
-		expect(result).toMatch(/<div[^>]+data-nojs-static=""[^>]*class="static-content"/);
+		expect(result).toMatch(
+			/<div[^>]+data-nojs-static=""[^>]*class="static-content"/,
+		);
 		// The dynamic p should NOT be marked static
-		expect(result).not.toMatch(/<p[^>]+data-nojs-static=""[^>]*>This is dynamic/);
+		expect(result).not.toMatch(
+			/<p[^>]+data-nojs-static=""[^>]*>This is dynamic/,
+		);
 	});
 
 	it("should mark children if the whole body is static", async () => {
@@ -55,7 +59,11 @@ describe("hoist-static-content plugin", () => {
 		`;
 
 		const result = await plugin.process(html);
-		expect(result).toMatch(/<div[^>]+data-nojs-static=""[^>]*class="real-static"/);
-		expect(result).not.toMatch(/<button[^>]+data-nojs-static=""[^>]*on:click="do\(\)"/);
+		expect(result).toMatch(
+			/<div[^>]+data-nojs-static=""[^>]*class="real-static"/,
+		);
+		expect(result).not.toMatch(
+			/<button[^>]+data-nojs-static=""[^>]*on:click="do\(\)"/,
+		);
 	});
 });

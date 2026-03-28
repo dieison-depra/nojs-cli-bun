@@ -3,7 +3,8 @@ import { parseHTML } from "linkedom";
 /** @type {import("../runner.js").Plugin} */
 export default {
 	name: "generate-import-map",
-	description: "Generate and inject an import map for bare specifiers (e.g., 'nojs')",
+	description:
+		"Generate and inject an import map for bare specifiers (e.g., 'nojs')",
 
 	async process(html, { config }) {
 		const { document: doc } = parseHTML(html);

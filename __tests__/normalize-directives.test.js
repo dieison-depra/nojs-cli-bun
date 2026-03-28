@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import plugin from "../src/prebuild/plugins/normalize-directives.js";
 
 describe("normalize-directives plugin", () => {
@@ -32,7 +32,7 @@ describe("normalize-directives plugin", () => {
 		`;
 
 		const result = await plugin.process(html);
-		expect(result).toContain('Hello ${s[0]}, you have ${s[1]} messages.');
+		expect(result).toContain(`Hello \${s[0]}, you have \${s[1]} messages.`);
 	});
 
 	it("should reuse indices for same state paths", async () => {

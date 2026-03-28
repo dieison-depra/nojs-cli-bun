@@ -1,5 +1,5 @@
-import { parseHTML } from "linkedom";
 import { createHash } from "node:crypto";
+import { parseHTML } from "linkedom";
 
 /**
  * Template Cloning Plugin (Solid.js Style)
@@ -30,7 +30,10 @@ export default {
 			const innerHTML = el.innerHTML.trim();
 			if (!innerHTML) continue;
 
-			const hash = createHash("md5").update(innerHTML).digest("hex").slice(0, 8);
+			const hash = createHash("md5")
+				.update(innerHTML)
+				.digest("hex")
+				.slice(0, 8);
 			const templateId = `nt-${hash}`;
 
 			// Check if template already exists
