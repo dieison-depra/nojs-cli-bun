@@ -4,6 +4,7 @@ import compileTemplates from "./compile-templates.js";
 import enforceScriptLoading from "./enforce-script-loading.js";
 import generateBundleReport from "./generate-bundle-report.js";
 import generateDeployConfig from "./generate-deploy-config.js";
+import generateEarlyHints from "./generate-early-hints.js";
 import generateImportMap from "./generate-import-map.js";
 import generatePwaManifest from "./generate-pwa-manifest.js";
 import generateResponsiveImages from "./generate-responsive-images.js";
@@ -40,6 +41,7 @@ export const builtinPlugins = {
 	[injectOgTwitter.name]: injectOgTwitter,
 	[generateSitemap.name]: generateSitemap,
 	[generateBundleReport.name]: generateBundleReport,
+	[generateEarlyHints.name]: generateEarlyHints,
 	[generateImportMap.name]: generateImportMap,
 	[generateDeployConfig.name]: generateDeployConfig,
 	[inlineAnimationCss.name]: inlineAnimationCss,
