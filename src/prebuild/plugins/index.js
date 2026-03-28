@@ -1,6 +1,7 @@
 import auditAccessibility from "./audit-accessibility.js";
 import auditMetaTags from "./audit-meta-tags.js";
 import compileTemplates from "./compile-templates.js";
+import differentialServing from "./differential-serving.js";
 import enforceScriptLoading from "./enforce-script-loading.js";
 import fingerprintAssets from "./fingerprint-assets.js";
 import generateBundleReport from "./generate-bundle-report.js";
@@ -72,6 +73,7 @@ export const builtinPlugins = {
 	[treeShakeFramework.name]: treeShakeFramework,
 	[injectEventDelegation.name]: injectEventDelegation,
 	[compileTemplates.name]: compileTemplates,
+	[differentialServing.name]: differentialServing,
 	[hoistStaticContent.name]: hoistStaticContent,
 	[normalizeDirectives.name]: normalizeDirectives,
 	[fingerprintAssets.name]: fingerprintAssets,
