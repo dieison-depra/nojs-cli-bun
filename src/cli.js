@@ -66,3 +66,8 @@ export async function run(argv) {
 		process.exit(1);
 	}
 }
+
+// Entry point
+if (import.meta.main || process.argv[1]?.endsWith("nojs.js")) {
+	run(process.argv.slice(2));
+}

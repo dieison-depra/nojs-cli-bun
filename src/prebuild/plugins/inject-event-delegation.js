@@ -25,7 +25,25 @@ export default {
 		let hasDelegated = false;
 
 		const allElements = doc.querySelectorAll("*");
+		// Also process elements inside <template> tags
 		for (const el of allElements) {
+			if (el.tagName === "TEMPLATE" && el.content) {
+				const templateElements = el.content.querySelectorAll("*");
+				// Process them
+				for (const tel of templateElements) {
+					processElement(tel);
+				}
+				// CRITICAL: Update the template's innerHTML so doc.toString() picks it up
+				// We join the string representation of children to avoid "#document-fragment"
+				el.innerHTML = Array.from(el.content.childNodes).map(n => n.toString()).join("");
+			}
+		}
+
+		for (const el of allElements) {
+			processElement(el);
+		}
+
+		function processElement(el) {
 			const attrs = el.getAttributeNames();
 			const delegatedForThisEl = [];
 

@@ -110,7 +110,12 @@ export default {
 			}
 
 			let childrenAreDynamic = false;
-			for (const child of Array.from(node.childNodes)) {
+			const children = Array.from(node.childNodes);
+			if (node.tagName === "TEMPLATE" && node.content) {
+				children.push(...Array.from(node.content.childNodes));
+			}
+
+			for (const child of children) {
 				if (checkDynamic(child)) {
 					childrenAreDynamic = true;
 				}
@@ -135,7 +140,11 @@ export default {
 				}
 			} else {
 				// Recurse into dynamic nodes to find static sub-roots
-				for (const child of Array.from(node.childNodes)) {
+				const children = Array.from(node.childNodes);
+				if (node.tagName === "TEMPLATE" && node.content) {
+					children.push(...Array.from(node.content.childNodes));
+				}
+				for (const child of children) {
 					markStaticRoots(child, true);
 				}
 			}
