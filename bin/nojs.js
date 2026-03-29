@@ -12510,6 +12510,10 @@ var init_hoist_static_content = __esm(() => {
           isNodeDynamic.set(node2, false);
           return false;
         }
+        if (node2.tagName === "TEMPLATE") {
+          isNodeDynamic.set(node2, true);
+          return true;
+        }
         let selfIsDynamic = false;
         for (const attr of node2.getAttributeNames()) {
           if (DYNAMIC_ATTRS.has(attr) || attr.startsWith("on:") || attr.startsWith("on-") || attr.startsWith("bind-") || INTERPOLATION_RE.test(node2.getAttribute(attr) || "")) {
@@ -12740,13 +12744,19 @@ function generateDelegationScript(events) {
   return `
 (function() {
   const h = (e) => {
-    const t = e.target.closest('[data-nojs-event*="' + e.type + '"]');
-    if (t && window.nojs && typeof window.nojs.run === 'function') {
-      const expr = t.getAttribute('data-nojs-on-' + e.type);
-      if (expr) window.nojs.run(expr, t, e);
+    let t = e.target;
+    const attr = 'data-nojs-on-' + e.type;
+    while (t && t !== document) {
+      if (t.hasAttribute && t.hasAttribute(attr)) {
+        if (window.NoJS && typeof window.NoJS.run === 'function') {
+          window.NoJS.run(t.getAttribute(attr), t, e);
+        }
+        break;
+      }
+      t = t.parentNode;
     }
   };
-  ${JSON.stringify(events)}.forEach(ev => document.addEventListener(ev, h, true));
+  ${JSON.stringify(events)}.forEach(ev => document.addEventListener(ev, h, { capture: true, passive: false }));
 })();`.trim();
 }
 var inject_event_delegation_default;
@@ -15419,7 +15429,7 @@ var init_plugin = __esm(() => {
 // package.json
 var package_default = {
   name: "@dieison-depra/nojs-cli-bun",
-  version: "1.2.1",
+  version: "1.2.2",
   description: "Official CLI for No.JS \u2014 scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
   main: "src/cli.js",
   bin: {

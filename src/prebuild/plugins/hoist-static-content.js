@@ -93,6 +93,13 @@ export default {
 				return false;
 			}
 
+			// CRITICAL: Templates are factories for dynamic content, always consider them dynamic
+			// so they are not marked as static, and we don't try to hoist their internals.
+			if (node.tagName === "TEMPLATE") {
+				isNodeDynamic.set(node, true);
+				return true;
+			}
+
 			let selfIsDynamic = false;
 
 			// Check attributes

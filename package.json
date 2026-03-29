@@ -1,6 +1,6 @@
 {
 	"name": "@dieison-depra/nojs-cli-bun",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"description": "Official CLI for No.JS — scaffold projects, optimize HTML, run dev server, validate templates, and manage plugins",
 	"main": "src/cli.js",
 	"bin": {

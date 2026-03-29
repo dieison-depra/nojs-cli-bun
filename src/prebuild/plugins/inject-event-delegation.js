@@ -91,12 +91,18 @@ function generateDelegationScript(events) {
 	return `
 (function() {
   const h = (e) => {
-    const t = e.target.closest('[data-nojs-event*="' + e.type + '"]');
-    if (t && window.nojs && typeof window.nojs.run === 'function') {
-      const expr = t.getAttribute('data-nojs-on-' + e.type);
-      if (expr) window.nojs.run(expr, t, e);
+    let t = e.target;
+    const attr = 'data-nojs-on-' + e.type;
+    while (t && t !== document) {
+      if (t.hasAttribute && t.hasAttribute(attr)) {
+        if (window.NoJS && typeof window.NoJS.run === 'function') {
+          window.NoJS.run(t.getAttribute(attr), t, e);
+        }
+        break;
+      }
+      t = t.parentNode;
     }
   };
-  ${JSON.stringify(events)}.forEach(ev => document.addEventListener(ev, h, true));
+  ${JSON.stringify(events)}.forEach(ev => document.addEventListener(ev, h, { capture: true, passive: false }));
 })();`.trim();
 }
